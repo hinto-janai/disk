@@ -14,6 +14,14 @@ lazy_static::lazy_static! {
 
 
 /// [`Bincode`](https://docs.rs/bincode) (binary) file format
+///
+/// The encoding options used is defined with [`lazy_static!`]:
+/// ```rust
+/// lazy_static::lazy_static! {
+///     pub static ref ENCODING_OPTIONS: WithOtherIntEncoding<DefaultOptions, VarintEncoding> =
+///         bincode::DefaultOptions::new().with_varint_encoding();
+/// }
+///```
 pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("bincode");

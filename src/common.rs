@@ -187,15 +187,15 @@ macro_rules! impl_common {
 		/// Create the directories leading up-to the file.
 		///
 		/// This is not necessary when using any variant of
-		/// `Self::write()` as the directories are created implicitly.
-		fn create_dir() -> Result<(), anyhow::Error> {
+		/// `Self::save()` as the directories are created implicitly.
+		fn mkdir() -> Result<(), anyhow::Error> {
 			Ok(std::fs::create_dir_all(Self::base_path()?)?)
 		}
 
-		/// Try writing a Rust structure as a file.
+		/// Try saving a Rust structure as a file.
 		///
 		/// Calling this will automatically create the directories leading up to the file.
-		fn write(&self) -> Result<(), anyhow::Error> {
+		fn save(&self) -> Result<(), anyhow::Error> {
 			// Create PATH.
 			let mut path = Self::base_path()?;
 			std::fs::create_dir_all(&path)?;
@@ -206,16 +206,16 @@ macro_rules! impl_common {
 			Ok(())
 		}
 
-		/// Try writing a Rust structure as a compressed file using `gzip`.
+		/// Try saving a Rust structure as a compressed file using `gzip`.
 		///
 		/// This will suffix the file with `.gz`, for example:
 		/// ```
-		/// config.json    // Normal file name with `.write()`
-		/// config.json.gz // File name when using `.write_gzip()`
+		/// config.json    // Normal file name with `.save()`
+		/// config.json.gz // File name when using `.save_gzip()`
 		/// ```
 		///
 		/// Calling this will automatically create the directories leading up to the file.
-		fn write_gzip(&self) -> Result<(), anyhow::Error> {
+		fn save_gzip(&self) -> Result<(), anyhow::Error> {
 			use std::io::prelude::*;
 			use flate2::Compression;
 			use flate2::write::GzEncoder;
@@ -235,7 +235,7 @@ macro_rules! impl_common {
 
 		/// **Note: This may not truely be atomic on Windows.**
 		///
-		/// Try writing a Rust structure to a TEMPORARY file first, then renaming it to the associated file.
+		/// Try saving a Rust structure to a TEMPORARY file first, then renaming it to the associated file.
 		///
 		/// This lowers the chance for data corruption on interrupt.
 		///
@@ -249,7 +249,7 @@ macro_rules! impl_common {
 		/// Already existing `.tmp` files will be overwritten.
 		///
 		/// Calling this will automatically create the directories leading up to the file.
-		fn write_atomic(&self) -> Result<(), anyhow::Error> {
+		fn save_atomic(&self) -> Result<(), anyhow::Error> {
 			// Create PATH.
 			let mut path = Self::base_path()?;
 			std::fs::create_dir_all(&path)?;
@@ -274,8 +274,8 @@ macro_rules! impl_common {
 			Ok(())
 		}
 
-		/// Combines [`Self::write_gzip()`] and [`Self::write_atomic()`].
-		fn write_atomic_gzip(&self) -> Result<(), anyhow::Error> {
+		/// Combines [`Self::save_gzip()`] and [`Self::save_atomic()`].
+		fn save_atomic_gzip(&self) -> Result<(), anyhow::Error> {
 			use std::io::prelude::*;
 			use flate2::Compression;
 			use flate2::write::GzEncoder;
