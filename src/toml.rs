@@ -6,7 +6,7 @@ use crate::common;
 //use serde::{Serialize,Deserialize};
 
 //---------------------------------------------------------------------------------------------------- Toml
-/// `TOML` file format
+/// [`TOML`](https://docs.rs/toml_edit) file format
 pub trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_string!("toml");

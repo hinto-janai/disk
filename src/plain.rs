@@ -6,7 +6,7 @@ use crate::common;
 //use serde::{Serialize,Deserialize};
 
 //---------------------------------------------------------------------------------------------------- Toml
-/// Plain text file format
+/// [`Plain`](https://docs.rs/serde_plain) text file format
 ///
 /// This is a plain text file with no extension.
 /// Typically used for small and simple data types like integers, strings, and enums.

@@ -7,7 +7,7 @@ use crate::common;
 use rmp_serde::{Deserializer, Serializer};
 
 //---------------------------------------------------------------------------------------------------- Rmp
-/// [`MessagePack`](https://docs.rs/rmp) (binary) file format
+/// [`MessagePack`](https://docs.rs/rmp-serde) (binary) file format
 pub trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("messagepack");

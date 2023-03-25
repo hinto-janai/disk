@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Yaml
-/// `YAML` file format
+/// [`YAML`](http://docs.rs/serde_yaml) file format
 pub trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_string!("yml");

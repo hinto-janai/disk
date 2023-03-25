@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Json
-/// `JSON` file format
+/// [`JSON`](https://docs.rs/serde_json) file format
 pub trait Json: serde::Serialize + serde::de::DeserializeOwned {
 	// Common functions.
 	common::impl_string!("json");

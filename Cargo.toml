@@ -21,7 +21,7 @@ plain       = ["serde_plain"]
 full        = ["toml", "json", "yaml", "log", "bincode", "pickle", "messagepack", "bson", "plain"]
 
 [package.metadata.docs.rs]
-features = ["full"]
+all-features = true
 
 [dependencies]
 # Required.
