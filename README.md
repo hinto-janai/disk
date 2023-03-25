@@ -55,8 +55,8 @@ Saving `State` to disk:
 ```rust
 let state = State { string: "Hello".to_string(), number: 0 };
 
-// This writes to `~/.local/share/myproject/state.toml`
-state.write().unwrap();
+// This saves to `~/.local/share/myproject/state.toml`
+state.save().unwrap();
 ```
 
 Creating a `State` _from_ disk:

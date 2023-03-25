@@ -1,6 +1,6 @@
 [package]
 name = "disk"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 authors = ["hinto.janai <hinto.janai@protonmail.com>"]
 description = "(De)serialize files to/from disk"
@@ -19,6 +19,9 @@ pickle      = ["serde-pickle"]
 messagepack = ["rmp-serde"]
 plain       = ["serde_plain"]
 full        = ["toml", "json", "yaml", "log", "bincode", "pickle", "messagepack", "bson", "plain"]
+
+[package.metadata.docs.rs]
+features = ["full"]
 
 [dependencies]
 # Required.

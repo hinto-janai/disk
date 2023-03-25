@@ -40,7 +40,7 @@
 //! let my_state = State { string: "Hello".to_string(), number: 123 };
 //!
 //! // Since our `State` struct implements the `Toml` trait, it can do that:
-//! match my_state.write() {
+//! match my_state.save() {
 //! 	Ok(_) => println!("We saved to disk"),
 //! 	Err(e) => eprintln!("We failed to save to disk"),
 //! }
