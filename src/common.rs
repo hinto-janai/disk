@@ -129,7 +129,7 @@ macro_rules! impl_common {
 		/// Read the file directly as bytes, and attempt `gzip` decompression.
 		///
 		/// This assumes the file is suffixed with `.gz`, for example:
-		/// ```
+		/// ```text,ignore
 		/// config.json    // What `.read_to_bytes()` will look for
 		/// config.json.gz // What `.read_to_bytes_gzip()` will look for
 		/// ```
@@ -209,7 +209,7 @@ macro_rules! impl_common {
 		/// Try saving a Rust structure as a compressed file using `gzip`.
 		///
 		/// This will suffix the file with `.gz`, for example:
-		/// ```
+		/// ```text,ignore
 		/// config.json    // Normal file name with `.save()`
 		/// config.json.gz // File name when using `.save_gzip()`
 		/// ```
@@ -242,7 +242,7 @@ macro_rules! impl_common {
 		/// The temporary file is removed if the rename fails.
 		///
 		/// The temporary file name is: `file_name` + `extension` + `.tmp`, for example:
-		/// ```
+		/// ```text,ignore
 		/// config.toml     // <- Real file
 		/// config.toml.tmp // <- Temporary version
 		/// ```
@@ -329,7 +329,7 @@ macro_rules! impl_common {
 		/// This lowers the chance for data corruption on interrupt.
 		///
 		/// The temporary file name is: `file_name` + `extension` + `.tmp`, for example:
-		/// ```
+		/// ```text,ignore
 		/// config.toml     // <- Real file
 		/// config.toml.tmp // <- Temporary version
 		/// ```
@@ -388,7 +388,7 @@ macro_rules! impl_common {
 		/// The main project directory.
 		///
 		/// You can also access this directly on your type:
-		/// ```
+		/// ```ignore
 		/// assert!(Data::project_directory() == Data::PROJECT_DIRECTORY);
 		/// ```
 		fn project_directory() -> &'static str {
@@ -399,7 +399,7 @@ macro_rules! impl_common {
 		/// The directories after the main project directory, before the file. (the first directory specified in the SUB_DIRECTORIES constant).
 		///
 		/// You can also access this directly on your type:
-		/// ```
+		/// ```ignore
 		/// assert!(Data::sub_dirs() == Data::SUB_DIRECTORIES);
 		/// ```
 		fn sub_directories() -> &'static str {
@@ -410,7 +410,7 @@ macro_rules! impl_common {
 		/// The filename + extension associated with this struct.
 		///
 		/// You can also access this directly on your type:
-		/// ```
+		/// ```ignore
 		/// assert!(Data::file_name() == Data::FILE_NAME);
 		/// ```
 		fn file_name() -> &'static str {

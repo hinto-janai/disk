@@ -16,7 +16,7 @@ lazy_static::lazy_static! {
 /// [`Bincode`](https://docs.rs/bincode) (binary) file format
 ///
 /// The encoding options used is:
-/// ```rust
+/// ```rust,ignore
 /// bincode::DefaultOptions::new().with_varint_encoding();
 /// ```
 pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {

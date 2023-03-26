@@ -1,7 +1,5 @@
 # Disk
-![Build](https://github.com/hinto-janai/disk/actions/workflows/build.yml/badge.svg)
-[![crates.io](https://img.shields.io/crates/v/disk.svg)](https://crates.io/crates/disk)
-[![docs.rs](https://docs.rs/disk/badge.svg)](https://docs.rs/disk)
+![Build](https://github.com/hinto-janai/disk/actions/workflows/build.yml/badge.svg) ![Test](https://github.com/hinto-janai/disk/actions/workflows/test.yml/badge.svg) [![crates.io](https://img.shields.io/crates/v/disk.svg)](https://crates.io/crates/disk) [![docs.rs](https://docs.rs/disk/badge.svg)](https://docs.rs/disk)
 
 Disk: [`serde`](https://docs.rs/serde) + [`directories`](https://docs.rs/directories) + a whole bunch of file formats as [`Traits`](https://doc.rust-lang.org/book/ch10-02-traits.html).
 

@@ -3,7 +3,7 @@
 //! This crate is for (de)serializing to/from various file formats (provided by `serde`) to/from disk locations that follow OS-specific specifications/conventions (provided by `directories`). All errors returned will be an [`anyhow::Error`].
 //!
 //! Example of data being saved on the user's disk for future use:
-//! ```
+//! ```rust,ignore
 //! use disk::prelude::*;       // Necessary imports to get things working.
 //! use disk::{Toml,toml_file}; // <- TOML trait & macro.
 //! use serde::{Serialize, Deserialize};
@@ -54,7 +54,7 @@
 //! Manually implementing these traits is possible as well, it requires 4 constants to be defined.
 //!
 //! The file extension (`.bin`, `.toml`, `.json`, `.bson`, etc) is inferred based on what trait you use.
-//! ```
+//! ```rust,ignore
 //! impl disk::Toml for State {
 //!     // Which OS directory it will be saved in.
 //! 	const OS_DIRECTORY: disk::Dir = disk::Dir::Data;
@@ -72,7 +72,7 @@
 //! `\` is also allowed but ONLY if building on Windows.
 //!
 //! An empty string `""` means NO sub directories.
-//! ```
+//! ```rust,ignore
 //! # use disk::Dir::Data;
 //! // Windows ... C:\Users\Alice\AppData\Roaming\My_Project\sub1\sub2\state.toml
 //! toml_file!(State, Data, "MyProject", r"sub1\sub2", "state");
@@ -102,12 +102,12 @@
 
 //
 // The "project" directory is taken from the `CARGO_PKG_NAME` environment variable, which should match the `[package.name]` key in your `Cargo.toml`, for example:
-// ```toml
+// ```toml,ignore
 // [package]
 // name = "my_project"
 // ```
 // This would create a directory like so:
-// ```text
+// ```text,ignore
 // Windows | C:\Users\Alice\AppData\Roaming\My_Project\
 // macOS   | /Users/Alice/Library/Application Support/My-Project/
 // Linux   | /home/alice/.local/share/myproject/
