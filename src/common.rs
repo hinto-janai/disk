@@ -390,9 +390,7 @@ macro_rules! impl_common {
 		/// The input to all `*_file!` macros are sanity checked.
 		/// The worst you can do with this function is delete your project's directory.
 		///
-		/// # WARNING
-		/// **If you manually implement `disk` traits, you are able to specify `/` or `C:`.
-		/// `disk` _will_ delete your entire drive if you tell it to.**
+		/// This function calls [`std::fs::remove_dir_all`], which does _not_ follow symlinks.
 		fn rm_rf() -> Result<(), anyhow::Error> {
 			Ok(std::fs::remove_dir_all(Self::base_path()?)?)
 		}
