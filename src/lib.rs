@@ -88,6 +88,8 @@
 //! ```
 //!
 //! # File Formats
+//! Use the feature flag `full` to enable _everything_.
+//!
 //! | File Format | Feature flag to enable |
 //! |-------------|------------------------|
 //! | Bincode     | `bincode`
@@ -98,6 +100,7 @@
 //! | MessagePack | `messagepack`
 //! | BSON        | `bson`
 //! | Plain Text  | `plain`
+//! | Empty File  | `empty`
 
 
 //
@@ -160,3 +163,8 @@ pub use crate::bson::Bson as Bson;
 mod plain;
 #[cfg(feature = "plain")]
 pub use crate::plain::Plain as Plain;
+
+#[cfg(feature = "empty")]
+mod empty;
+#[cfg(feature = "empty")]
+pub use crate::empty::Empty as Empty;

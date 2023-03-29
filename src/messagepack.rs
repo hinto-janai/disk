@@ -8,6 +8,8 @@ use rmp_serde::{Deserializer, Serializer};
 
 //---------------------------------------------------------------------------------------------------- Rmp
 /// [`MessagePack`](https://docs.rs/rmp-serde) (binary) file format
+///
+/// File extension is `.messagepack`.
 pub trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("messagepack");
@@ -24,6 +26,8 @@ pub trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
 }
 
 /// Quickly implement the [`MessagePack`] trait.
+///
+/// File extension is `.messagepack`.
 #[macro_export]
 macro_rules! messagepack_file {
 	($type:ty, $dir:expr, $project_directory:literal, $sub_directories:literal, $file_name:literal) => {

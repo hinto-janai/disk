@@ -5,6 +5,8 @@ use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Yaml
 /// [`YAML`](http://docs.rs/serde_yaml) file format
+///
+/// File extension is `.yml`.
 pub trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_string!("yml");
@@ -33,6 +35,8 @@ pub trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 }
 
 /// Quickly implement the [`Yaml`] trait.
+///
+/// File extension is `.yml`.
 #[macro_export]
 macro_rules! yaml_file {
 	($type:ty, $dir:expr, $project_directory:literal, $sub_directories:literal, $file_name:literal) => {

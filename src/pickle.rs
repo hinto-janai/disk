@@ -7,6 +7,8 @@ use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Rmp
 /// [`Pickle`](https://docs.rs/serde_pickle) (binary) file format
+///
+/// File extension is `.pickle`.
 pub trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("pickle");
@@ -23,6 +25,8 @@ pub trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
 }
 
 /// Quickly implement the [`Pickle`] trait.
+///
+/// File extension is `.pickle`.
 #[macro_export]
 macro_rules! pickle_file {
 	($type:ty, $dir:expr, $project_directory:literal, $sub_directories:literal, $file_name:literal) => {

@@ -103,23 +103,10 @@ pub(crate) fn assert_safe_path(path: &Path) -> Result<(), Error> {
 	Ok(())
 }
 
-//---------------------------------------------------------------------------------------------------- impl_common
-// Implements common methods for all traits.
-// The actual traits themselves need to implement:
-//   - to_bytes()
-//   - from_bytes()
-//
-macro_rules! impl_common {
+//---------------------------------------------------------------------------------------------------- impl_io
+// Implements I/O methods for all traits.
+macro_rules! impl_io {
 	($file_ext:literal) => {
-		/// Which OS directory it will be saved in.
-		const OS_DIRECTORY: common::Dir;
-		/// What the main project directory will be.
-		const PROJECT_DIRECTORY: &'static str;
-		/// Optional sub directories in between the project directory and file.
-		const SUB_DIRECTORIES: &'static str;
-		/// What the filename will be.
-		const FILE_NAME: &'static str;
-
 		#[inline(always)]
 		/// Read the file directly as bytes.
 		fn read_to_bytes() -> Result<Vec<u8>, anyhow::Error> {
@@ -149,18 +136,6 @@ macro_rules! impl_common {
 		}
 
 		#[inline(always)]
-		/// Check if the file exists.
-		///
-		/// `true`  == The file exists.
-		/// `false` == The file does not exist.
-		/// `anyhow::Error` == There was an error, existance is unknown.
-		fn exists() -> Result<bool, anyhow::Error> {
-			let path = Self::absolute_path()?;
-
-			Ok(path.exists())
-		}
-
-		#[inline(always)]
 		/// Same as `Self::exists()` but checks if the `gzip` file exists.
 		///
 		/// - `Self::exists()` checks for `file.toml`.
@@ -183,18 +158,9 @@ macro_rules! impl_common {
 			Ok(Self::from_bytes(&Self::read_to_bytes_gzip()?)?)
 		}
 
-		#[inline]
-		/// Create the directories leading up-to the file.
-		///
-		/// This is not necessary when using any variant of
-		/// `Self::save()` as the directories are created implicitly.
-		fn mkdir() -> Result<(), anyhow::Error> {
-			Ok(std::fs::create_dir_all(Self::base_path()?)?)
-		}
-
 		/// Try saving a Rust structure as a file.
 		///
-		/// Calling this will automatically create the directories leading up to the file.
+ 		/// Calling this will automatically create the directories leading up to the file.
 		fn save(&self) -> Result<(), anyhow::Error> {
 			// Create PATH.
 			let mut path = Self::base_path()?;
@@ -308,20 +274,6 @@ macro_rules! impl_common {
 			Ok(())
 		}
 
-		/// Try deleting the current file associated with the Rust structure.
-		///
-		/// This will return success if the file doesn't exist or if deleted.
-		///
-		/// It will return failure if the file existed but could not be deleted or if any other error occurs.
-		fn remove() -> Result<(), anyhow::Error> {
-			let mut path = Self::base_path()?;
-			path.push(Self::FILE_NAME);
-
-			if !path.exists() { return Ok(()) }
-
-			Ok(std::fs::remove_file(path)?)
-		}
-
 		/// **Note: This may not truely be atomic on Windows.**
 		///
 		/// Rename the associated file before attempting to delete it.
@@ -334,7 +286,7 @@ macro_rules! impl_common {
 		/// config.toml.tmp // <- Temporary version
 		/// ```
 		/// Already existing `.tmp` files will be overwritten.
-		fn remove_atomic(&self) -> Result<(), anyhow::Error> {
+		fn rm_atomic(&self) -> Result<(), anyhow::Error> {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
@@ -349,8 +301,8 @@ macro_rules! impl_common {
 			Ok(())
 		}
 
-		/// Same as [`Self::remove_atomic()`] but looks for the `.gz` extension.
-		fn remove_atomic_gzip(&self) -> Result<(), anyhow::Error> {
+		/// Same as [`Self::rm_atomic()`] but looks for the `.gz` extension.
+		fn rm_atomic_gzip(&self) -> Result<(), anyhow::Error> {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
@@ -365,12 +317,12 @@ macro_rules! impl_common {
 			Ok(())
 		}
 
-		/// Try deleting any leftover `.tmp` files from [`Self::write_atomic()`] or [`Self::write_atomic_gzip()`]
+		/// Try deleting any leftover `.tmp` files from [`Self::save_atomic()`] or [`Self::save_atomic_gzip()`]
 		///
 		/// This will return success if the files don't exist or if deleted.
 		///
 		/// It will return failure if files existed but could not be deleted or if any other error occurs.
-		fn remove_tmp() -> Result<(), anyhow::Error> {
+		fn rm_tmp() -> Result<(), anyhow::Error> {
 			let mut tmp = Self::base_path()?;
 			let mut gzip = tmp.clone();
 
@@ -385,13 +337,107 @@ macro_rules! impl_common {
 		}
 
 		#[inline(always)]
+		/// The absolute PATH of the file associated with this struct WITH the `.gz` extension.
+		fn absolute_path_gzip() -> Result<PathBuf, anyhow::Error> {
+			let mut base = Self::base_path()?;
+			base.push(format!("{}.gz", Self::FILE_NAME));
+
+			common::assert_safe_path(&base)?;
+
+			Ok(base)
+		}
+	}
+}
+pub(crate) use impl_io;
+
+//---------------------------------------------------------------------------------------------------- impl_common
+// Implements the CONSTANTS and common PATH methods for all traits.
+macro_rules! impl_common {
+	($file_ext:literal) => {
+		/// Which OS directory it will be saved in.
+		const OS_DIRECTORY: common::Dir;
+		/// What the main project directory will be.
+		const PROJECT_DIRECTORY: &'static str;
+		/// Optional sub directories in between the project directory and file.
+		const SUB_DIRECTORIES: &'static str;
+		/// What the filename will be.
+		const FILE_NAME: &'static str;
+
+		#[inline]
+		/// Create the directories leading up-to the file.
+		///
+		/// This is not necessary when using any variant of
+		/// `Self::save()` as the directories are created implicitly.
+		fn mkdir() -> Result<(), anyhow::Error> {
+			Ok(std::fs::create_dir_all(Self::base_path()?)?)
+		}
+
+		#[inline]
+		/// Recursively remove this file's project directory.
+		///
+		/// This deletes _all_ directories starting from [`Self::PROJECT_DIRECTORY`].
+		/// For example:
+		/// ```rust,ignore
+		/// toml_file!(State, Dir::Data, "MyProject", "sub_dir", "state");
+		/// ```
+		/// This project's file would be located at `~/.local/share/myproject`.
+		/// This is the `PATH` that gets removed recursively.
+		///
+		/// This is akin to running:
+		/// ```ignore
+		/// rm -rf ~/.local/share/myproject
+		/// ```
+		/// The input to all `*_file!` macros are sanity checked.
+		/// The worst you can do with this function is delete your project's directory.
+		///
+		/// # WARNING
+		/// **If you manually implement `disk` traits, you are able to specify `/` or `C:`.
+		/// `disk` _will_ delete your entire drive if you tell it to.**
+		fn rm_rf() -> Result<(), anyhow::Error> {
+			Ok(std::fs::remove_dir_all(Self::base_path()?)?)
+		}
+
+		/// Try deleting the current file associated with the Rust structure.
+		///
+		/// This will return success if the file doesn't exist or if deleted.
+		///
+		/// It will return failure if the file existed but could not be deleted or if any other error occurs.
+		fn rm() -> Result<(), anyhow::Error> {
+			let mut path = Self::base_path()?;
+			path.push(Self::FILE_NAME);
+
+			if !path.exists() { return Ok(()) }
+
+			Ok(std::fs::remove_file(path)?)
+		}
+
+		#[inline(always)]
+		/// Check if the file exists.
+		///
+		/// `true`  == The file exists.
+		/// `false` == The file does not exist.
+		/// `anyhow::Error` == There was an error, existance is unknown.
+		fn exists() -> Result<bool, anyhow::Error> {
+			let path = Self::absolute_path()?;
+
+			Ok(path.exists())
+		}
+
+		#[inline(always)]
 		/// The main project directory.
 		///
 		/// You can also access this directly on your type:
-		/// ```ignore
-		/// assert!(Data::project_directory() == Data::PROJECT_DIRECTORY);
+		/// ```rust
+		/// # use serde::{Serialize,Deserialize};
+		/// # use disk::{Toml,toml_file};
+		/// # use disk::prelude::*;
+		/// toml_file!(Data, Dir::Cache, "MyProject", "", "data");
+		/// #[derive(Serialize, Deserialize)]
+		/// struct Data(u64);
+		///
+		/// assert!(Data::project_dir() == Data::PROJECT_DIRECTORY);
 		/// ```
-		fn project_directory() -> &'static str {
+		fn project_dir() -> &'static str {
 			Self::PROJECT_DIRECTORY
 		}
 
@@ -399,10 +445,17 @@ macro_rules! impl_common {
 		/// The directories after the main project directory, before the file. (the first directory specified in the SUB_DIRECTORIES constant).
 		///
 		/// You can also access this directly on your type:
-		/// ```ignore
+		/// ```rust
+		/// # use serde::{Serialize,Deserialize};
+		/// # use disk::{Toml,toml_file};
+		/// # use disk::prelude::*;
+		/// toml_file!(Data, Dir::Cache, "MyProject", "sub_directory", "data");
+		/// #[derive(Serialize, Deserialize)]
+		/// struct Data(u64);
+		///
 		/// assert!(Data::sub_dirs() == Data::SUB_DIRECTORIES);
 		/// ```
-		fn sub_directories() -> &'static str {
+		fn sub_dirs() -> &'static str {
 			Self::SUB_DIRECTORIES
 		}
 
@@ -410,7 +463,14 @@ macro_rules! impl_common {
 		/// The filename + extension associated with this struct.
 		///
 		/// You can also access this directly on your type:
-		/// ```ignore
+		/// ```rust
+		/// # use serde::{Serialize,Deserialize};
+		/// # use disk::{Toml,toml_file};
+		/// # use disk::prelude::*;
+		/// toml_file!(Data, Dir::Cache, "MyProject", "", "data");
+		/// #[derive(Serialize, Deserialize)]
+		/// struct Data(u64);
+		///
 		/// assert!(Data::file_name() == Data::FILE_NAME);
 		/// ```
 		fn file_name() -> &'static str {
@@ -447,17 +507,6 @@ macro_rules! impl_common {
 
 			Ok(base)
 		}
-
-		#[inline(always)]
-		/// The absolute PATH of the file associated with this struct WITH the `.gz` extension.
-		fn absolute_path_gzip() -> Result<PathBuf, anyhow::Error> {
-			let mut base = Self::base_path()?;
-			base.push(format!("{}.gz", Self::FILE_NAME));
-
-			common::assert_safe_path(&base)?;
-
-			Ok(base)
-		}
 	}
 }
 pub(crate) use impl_common;
@@ -468,6 +517,7 @@ pub(crate) use impl_common;
 macro_rules! impl_string {
 	($file_ext:literal) => {
 		common::impl_common!($file_ext);
+		common::impl_io!($file_ext);
 
 		#[inline(always)]
 		/// Turn [`Self`] into a [`String`], maintaining formatting if possible.
@@ -498,7 +548,8 @@ pub(crate) use impl_string;
 // This automatically implements `impl_common!()`.
 macro_rules! impl_binary {
 	($file_ext:literal) => {
-		common::impl_common!($file_ext);
+		crate::common::impl_common!($file_ext);
+		crate::common::impl_io!($file_ext);
 
 		#[inline(always)]
 		/// Turn [`Self`] into bytes that can be written to disk.

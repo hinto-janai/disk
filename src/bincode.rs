@@ -16,9 +16,12 @@ lazy_static::lazy_static! {
 /// [`Bincode`](https://docs.rs/bincode) (binary) file format
 ///
 /// The encoding options used is:
-/// ```rust,ignore
+/// ```rust
+/// # use bincode::Options;
 /// bincode::DefaultOptions::new().with_varint_encoding();
 /// ```
+///
+/// File extension is `.bin`.
 pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("bincode");
@@ -153,6 +156,8 @@ pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 }
 
 /// Quickly implement the [`Bincode`] trait.
+///
+/// File extension is `.bin`.
 #[macro_export]
 macro_rules! bincode_file {
 	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:literal, $file_name:literal, $header:tt, $version:tt) => {

@@ -7,6 +7,8 @@ use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Toml
 /// [`TOML`](https://docs.rs/toml_edit) file format
+///
+/// File extension is `.toml`.
 pub trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_string!("toml");
@@ -34,6 +36,8 @@ pub trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 }
 
 /// Quickly implement the [`Toml`] trait.
+///
+/// File extension is `.toml`.
 #[macro_export]
 macro_rules! toml_file {
 	($type:ty, $dir:expr, $project_directory:literal, $sub_directories:literal, $file_name:literal) => {

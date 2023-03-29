@@ -1,6 +1,6 @@
 [package]
 name = "disk"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 authors = ["hinto.janai <hinto.janai@protonmail.com>"]
 description = "(De)serialize files to/from disk"
@@ -11,14 +11,15 @@ keywords = ["disk", "file", "toml", "json", "bincode"]
 license = "MIT"
 
 [features]
-default = []
+default     = []
 toml        = ["toml_edit"]
 json        = ["serde_json"]
 yaml        = ["serde_yaml"]
 pickle      = ["serde-pickle"]
 messagepack = ["rmp-serde"]
 plain       = ["serde_plain"]
-full        = ["toml", "json", "yaml", "log", "bincode", "pickle", "messagepack", "bson", "plain"]
+empty       = []
+full        = ["toml", "json", "yaml", "log", "bincode", "pickle", "messagepack", "bson", "plain", "empty"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -28,7 +29,7 @@ all-features = true
 anyhow      = "1.0.70"
 #disk_derive = { path = "../disk_derive" }
 directories = "5.0.0"
-serde       = { version = "1.0.158", features = ["derive"] }
+serde       = { version = "1.0.159", features = ["derive"] }
 const_format = { version = "0.2.30", features = ["rust_1_51", "assertcp", "rust_1_64"] }
 flate2 = "1.0.25"
 lazy_static = "1.4.0"
@@ -37,7 +38,7 @@ lazy_static = "1.4.0"
 log          = { version = "0.4.17", optional = true }
 bincode      = { version = "1.3.3", optional = true }
 toml_edit    = { version = "0.19.8", features = ["serde"], optional = true }
-serde_json   = { version = "1.0.94", optional = true }
+serde_json   = { version = "1.0.95", optional = true }
 serde_yaml   = { version = "0.9.19", optional = true }
 serde-pickle = { version = "1.1.1", optional = true }
 rmp-serde    = { version = "1.1.1", optional = true }

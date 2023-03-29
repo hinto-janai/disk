@@ -7,6 +7,8 @@ use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Rmp
 /// [`Bson`](https://docs.rs/bson) (binary) file format
+///
+/// File extension is `.bson`.
 pub trait Bson: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("bson");
@@ -23,6 +25,8 @@ pub trait Bson: serde::Serialize + serde::de::DeserializeOwned {
 }
 
 /// Quickly implement the [`Bson`] trait.
+///
+/// File extension is `.bson`.
 #[macro_export]
 macro_rules! bson_file {
 	($type:ty, $dir:expr, $project_directory:literal, $sub_directories:literal, $file_name:literal) => {

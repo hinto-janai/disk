@@ -5,6 +5,8 @@ use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Json
 /// [`JSON`](https://docs.rs/serde_json) file format
+///
+/// File extension is `.json`.
 pub trait Json: serde::Serialize + serde::de::DeserializeOwned {
 	// Common functions.
 	common::impl_string!("json");
@@ -33,6 +35,8 @@ pub trait Json: serde::Serialize + serde::de::DeserializeOwned {
 }
 
 /// Quickly implement the [`Json`] trait.
+///
+/// File extension is `.json`.
 #[macro_export]
 macro_rules! json_file {
 	($type:ty, $dir:expr, $project_directory:literal, $sub_directories:literal, $file_name:literal) => {
