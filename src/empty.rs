@@ -6,7 +6,11 @@ use crate::common;
 //---------------------------------------------------------------------------------------------------- Toml
 /// [`Empty`] file
 ///
-/// This is a an empty file. It contains no data, but it inherits useful `PATH` methods.
+/// This is a an empty file that
+/// - Contains no data
+/// - Doesn't need `serde`
+/// - Inherits useful `PATH` methods.
+///
 /// Typically used for file-based signals.
 ///
 /// If you implement this on a `struct` that contains data, the data will be ignored
@@ -42,7 +46,7 @@ use crate::common;
 /// This creates a file called `hello`, containing no data. The `bool` is ignored.
 ///
 /// The `PATH` on Linux would be: `~/.local/share/disk_test/signal/hello`.
-pub trait Empty: serde::Serialize + serde::de::DeserializeOwned {
+pub trait Empty {
 	// Common path methods.
 	common::impl_common!("");
 
