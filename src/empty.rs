@@ -70,7 +70,7 @@ pub trait Empty {
 /// No file extension.
 #[macro_export]
 macro_rules! empty_file {
-	($type:ty, $dir:expr, $project_directory:expr, $sub_directories:expr, $file_name:expr) => {
+	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
 		const_assert!(const_format!("{}", $project_directory).len() != 0);
 		const_assert!(const_format!("{}", $file_name).len() != 0);
  		impl Empty for $type {

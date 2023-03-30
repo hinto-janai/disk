@@ -160,7 +160,7 @@ pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 /// File extension is `.bin`.
 #[macro_export]
 macro_rules! bincode_file {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:literal, $file_name:literal, $header:tt, $version:tt) => {
+	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt, $header:tt, $version:tt) => {
 		const_assert!(const_format!("{}", $project_directory).len() != 0);
 		const_assert!(const_format!("{}", $file_name).len() != 0);
  		impl Bincode for $type {

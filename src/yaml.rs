@@ -39,7 +39,7 @@ pub trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 /// File extension is `.yml`.
 #[macro_export]
 macro_rules! yaml_file {
-	($type:ty, $dir:expr, $project_directory:literal, $sub_directories:literal, $file_name:literal) => {
+	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
 		const_assert!(const_format!("{}", $project_directory).len() != 0);
 		const_assert!(const_format!("{}", $file_name).len() != 0);
  		impl Yaml for $type {
