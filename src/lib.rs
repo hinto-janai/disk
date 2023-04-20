@@ -93,6 +93,7 @@
 //! | File Format | Feature flag to enable |
 //! |-------------|------------------------|
 //! | Bincode     | `bincode`
+//! | Postcard    | `postcard`
 //! | JSON        | `json`
 //! | TOML        | `toml`
 //! | YAML        | `yaml`
@@ -101,7 +102,6 @@
 //! | BSON        | `bson`
 //! | Plain Text  | `plain`
 //! | Empty File  | `empty`
-
 
 //
 // The "project" directory is taken from the `CARGO_PKG_NAME` environment variable, which should match the `[package.name]` key in your `Cargo.toml`, for example:
@@ -128,6 +128,11 @@ pub mod prelude {
 mod bincode;
 #[cfg(feature = "bincode")]
 pub use crate::bincode::Bincode as Bincode;
+
+#[cfg(feature = "postcard")]
+mod postcard;
+#[cfg(feature = "postcard")]
+pub use crate::postcard::Postcard as Postcard;
 
 #[cfg(feature = "json")]
 mod json;
