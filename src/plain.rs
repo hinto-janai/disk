@@ -6,6 +6,8 @@ use crate::common;
 //use serde::{Serialize,Deserialize};
 
 //---------------------------------------------------------------------------------------------------- Toml
+crate::common::impl_macro_no_ext!(Plain);
+
 /// [`Plain`](https://docs.rs/serde_plain) text file format
 ///
 /// This is a plain text file with the file extension `.txt`.
@@ -62,24 +64,6 @@ pub trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 		file.read_exact(&mut byte)?;
 
 		Ok(byte)
-	}
-}
-
-/// Quickly implement the [`Plain`] trait.
-///
-/// File extension is `.txt`.
-#[macro_export]
-macro_rules! plain {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
-		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
-		#[$crate::inherent]
- 		impl $crate::Plain for $type {
-			const OS_DIRECTORY: $crate::Dir = $dir;
-			const PROJECT_DIRECTORY: &'static str = $project_directory;
-			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = $file_name;
-		}
 	}
 }
 

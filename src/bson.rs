@@ -6,6 +6,8 @@ use crate::common;
 //use serde::{Serialize,Deserialize};
 
 //---------------------------------------------------------------------------------------------------- Rmp
+crate::common::impl_macro!(Bson, "bson");
+
 /// [`Bson`](https://docs.rs/bson) (binary) file format
 ///
 /// File extension is `.bson`.
@@ -21,24 +23,6 @@ pub trait Bson: serde::Serialize + serde::de::DeserializeOwned {
 	#[inline(always)]
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		common::convert_error(bson::to_vec(self))
-	}
-}
-
-/// Quickly implement the [`Bson`] trait.
-///
-/// File extension is `.bson`.
-#[macro_export]
-macro_rules! bson {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
-		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
-		#[$crate::inherent]
- 		impl $crate::Bson for $type {
-			const OS_DIRECTORY: $crate::Dir = $dir;
-			const PROJECT_DIRECTORY: &'static str = $project_directory;
-			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = $crate::const_format!("{}.{}", $file_name, "bson");
-		}
 	}
 }
 

@@ -555,6 +555,190 @@ macro_rules! impl_binary {
 }
 pub(crate) use impl_binary;
 
+//---------------------------------------------------------------------------------------------------- Macro for macro impl.
+// Assert string is not empty.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! assert_str {
+	($project_directory:tt, $file_name:tt) => {
+		$crate::const_assert!($project_directory.len() != 0, "disk: 'Project Directory' must not be an empty string!");
+		$crate::const_assert!($file_name.len() != 0, "disk: 'File Name' must not be an empty string!");
+	}
+}
+pub use assert_str;
+
+// Binary files.
+macro_rules! impl_macro_binary {
+	($trait:ident, $file_ext:literal) => {
+		use common::Dir;
+		paste::item! {
+			#[doc = "
+Implement the [`" $trait "`] trait
+
+File extension is `" $file_ext "` and is automatically appended.
+
+### Input
+These are the inputs you need to provide to implement [`" $trait "`].
+
+| Variable             | Description                             | Related Trait Constant            | Type               | Example       |
+|----------------------|-----------------------------------------|-----------------------------------|--------------------|---------------|
+| `$data`              | Identifier of the data to implement for |                                   | `struct` or `enum` | `State`
+| `$dir`               | Which OS directory to use               | [`" $trait "::OS_DIRECTORY`]      | [`Dir`]            | [`Dir::Data`]
+| `$project_directory` | The name of the top project folder      | [`" $trait "::PROJECT_DIRECTORY`] | [`&str`]           | `\"MyProject\"`
+| `$sub_directories`   | (Optional) sub-directories before file  | [`" $trait "::SUB_DIRECTORIES`]   | [`&str`]           | `\"some/dirs\"`
+| `$file_name`         | The file name to use                    | [`" $trait "::FILE_NAME`]         | [`&str`]           | `\"state\"`
+| `$header`            | `24` custom byte header                 | [`" $trait "::HEADER`]            | `[u8; 24]`         | `[1_u8; 24]`
+| `$version`           | `1` byte custom version                 | [`" $trait "::VERSION`]           | `u8`               | `1_u8`
+
+### Example
+```rust
+use serde::{Serialize,Deserialize};
+use disk::*;
+
+const HEADER: [u8; 24] = [255_u8; 24];
+const VERSION: u8 = 5;
+
+" $trait:lower "!(State, Dir::Data, \"MyProject\", \"some/dirs\", \"state\", HEADER, VERSION);
+#[derive(Serialize,Deserialize)]
+struct State {
+    string: String,
+    number: u32,
+}
+```
+
+This example would be located at `~/.local/share/myproject/some/dirs/state." $file_ext "`.
+"]
+			#[macro_export]
+			macro_rules! [<$trait:lower>] {
+				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt, $header:tt, $version:tt) => {
+					$crate::assert_str!($project_directory, $file_name);
+
+			 		impl $crate::$trait for $data {
+						const OS_DIRECTORY:      $crate::Dir  = $dir;
+						const PROJECT_DIRECTORY: &'static str = $project_directory;
+						const SUB_DIRECTORIES:   &'static str = $sub_directories;
+						const FILE_NAME:         &'static str = $crate::const_format!("{}.{}", $file_name, $file_ext);
+						const HEADER:            [u8; 24]     = $header;
+						const VERSION:           u8           = $version;
+					}
+				}
+			}
+			pub(crate) use [<$trait:lower>];
+		}
+	};
+}
+pub(crate) use impl_macro_binary;
+
+// Empty (no extension) file.
+macro_rules! impl_macro_no_ext {
+	($trait:ident) => {
+		use common::Dir;
+		paste::item! {
+			#[doc = "
+Implement the [`" $trait "`] trait
+
+[`" $trait "`] has no file extension.
+
+### Input
+These are the inputs you need to provide to implement [`" $trait "`].
+
+| Variable             | Description                             | Related Trait Constant            | Type               | Example       |
+|----------------------|-----------------------------------------|-----------------------------------|--------------------|---------------|
+| `$data`              | Identifier of the data to implement for |                                   | `struct` or `enum` | `MyState`
+| `$dir`               | Which OS directory to use               | [`" $trait "::OS_DIRECTORY`]      | [`Dir`]            | [`Dir::Data`]
+| `$project_directory` | The name of the top project folder      | [`" $trait "::PROJECT_DIRECTORY`] | [`&str`]           | `\"MyProject\"`
+| `$sub_directories`   | (Optional) sub-directories before file  | [`" $trait "::SUB_DIRECTORIES`]   | [`&str`]           | `\"some/dirs\"`
+| `$file_name`         | The file name to use                    | [`" $trait "::FILE_NAME`]         | [`&str`]           | `\"state\"`
+
+### Example
+```rust
+use serde::{Serialize,Deserialize};
+use disk::*;
+
+" $trait:lower "!(State, Dir::Data, \"MyProject\", \"some/dirs\", \"state\");
+#[derive(Serialize,Deserialize)]
+struct State {
+    string: String,
+    number: u32,
+}
+```
+
+This example would be located at `~/.local/share/myproject/some/dirs/state`.
+"]
+			#[macro_export]
+			macro_rules! [<$trait:lower>] {
+				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
+					$crate::assert_str!($project_directory, $file_name);
+
+			 		impl $crate::$trait for $data {
+						const OS_DIRECTORY:      $crate::Dir  = $dir;
+						const PROJECT_DIRECTORY: &'static str = $project_directory;
+						const SUB_DIRECTORIES:   &'static str = $sub_directories;
+						const FILE_NAME:         &'static str = $file_name;
+					}
+				}
+			}
+			pub(crate) use [<$trait:lower>];
+		}
+	};
+}
+pub(crate) use impl_macro_no_ext;
+
+// Regular files.
+macro_rules! impl_macro {
+	($trait:ident, $file_ext:literal) => {
+		use common::Dir;
+		paste::item! {
+			#[doc = "
+Implement the [`" $trait "`] trait
+
+File extension is `" $file_ext "` and is automatically appended.
+
+### Input
+These are the inputs you need to provide to implement [`" $trait "`].
+
+| Variable             | Description                             | Related Trait Constant            | Type               | Example       |
+|----------------------|-----------------------------------------|-----------------------------------|--------------------|---------------|
+| `$data`              | Identifier of the data to implement for |                                   | `struct` or `enum` | `MyState`
+| `$dir`               | Which OS directory to use               | [`" $trait "::OS_DIRECTORY`]      | [`Dir`]            | [`Dir::Data`]
+| `$project_directory` | The name of the top project folder      | [`" $trait "::PROJECT_DIRECTORY`] | [`&str`]           | `\"MyProject\"`
+| `$sub_directories`   | (Optional) sub-directories before file  | [`" $trait "::SUB_DIRECTORIES`]   | [`&str`]           | `\"some/dirs\"`
+| `$file_name`         | The file name to use                    | [`" $trait "::FILE_NAME`]         | [`&str`]           | `\"state\"`
+
+### Example
+```rust
+use serde::{Serialize,Deserialize};
+use disk::*;
+
+" $trait:lower "!(State, Dir::Data, \"MyProject\", \"some/dirs\", \"state\");
+#[derive(Serialize,Deserialize)]
+struct State {
+    string: String,
+    number: u32,
+}
+```
+
+This example would be located at `~/.local/share/myproject/some/dirs/state." $file_ext "`.
+"]
+			#[macro_export]
+			macro_rules! [<$trait:lower>] {
+				($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
+					$crate::assert_str!($project_directory, $file_name);
+
+			 		impl $crate::$trait for $type {
+						const OS_DIRECTORY:      $crate::Dir  = $dir;
+						const PROJECT_DIRECTORY: &'static str = $project_directory;
+						const SUB_DIRECTORIES:   &'static str = $sub_directories;
+						const FILE_NAME:         &'static str = $crate::const_format!("{}.{}", $file_name, $file_ext);
+					}
+				}
+			}
+			pub(crate) use [<$trait:lower>];
+		}
+	};
+}
+pub(crate) use impl_macro;
+
 //---------------------------------------------------------------------------------------------------- TESTS
 //#[cfg(test)]
 //mod test {

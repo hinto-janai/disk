@@ -6,6 +6,8 @@ use crate::common;
 //use serde::{Serialize,Deserialize};
 
 //---------------------------------------------------------------------------------------------------- Toml
+crate::common::impl_macro!(Toml, "toml");
+
 /// [`TOML`](https://docs.rs/toml_edit) file format
 ///
 /// File extension is `.toml`.
@@ -32,24 +34,6 @@ pub trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 	#[inline(always)]
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(toml_edit::de::from_str(string))
-	}
-}
-
-/// Quickly implement the [`Toml`] trait.
-///
-/// File extension is `.toml`.
-#[macro_export]
-macro_rules! toml {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
-		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
-		#[$crate::inherent]
- 		impl $crate::Toml for $type {
-			const OS_DIRECTORY: $crate::Dir = $dir;
-			const PROJECT_DIRECTORY: &'static str = $project_directory;
-			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = $crate::const_format!("{}.{}", $file_name, "toml");
-		}
 	}
 }
 

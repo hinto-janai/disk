@@ -6,6 +6,8 @@ use crate::common;
 //use serde::{Serialize,Deserialize};
 
 //---------------------------------------------------------------------------------------------------- Postcard
+crate::common::impl_macro!(Postcard, "bin");
+
 /// [`Postcard`](https://docs.rs/postcard) (binary) file format
 ///
 /// File extension is `.bin`.
@@ -142,26 +144,6 @@ pub trait Postcard: serde::Serialize + serde::de::DeserializeOwned {
 //
 //		Ok(byte)
 //	}
-}
-
-/// Quickly implement the [`Postcard`] trait.
-///
-/// File extension is `.bin`.
-#[macro_export]
-macro_rules! postcard {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt, $header:tt, $version:tt) => {
-		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
-		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
-		#[$crate::inherent]
- 		impl $crate::Postcard for $type {
-			const OS_DIRECTORY: $crate::Dir = $dir;
-			const PROJECT_DIRECTORY: &'static str = $project_directory;
-			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = $crate::const_format!("{}.{}", $file_name, "bin");
-//			const HEADER: [u8; 24] = $header;
-//			const VERSION: u8 = $version;
-		}
-	}
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Yaml
+crate::common::impl_macro!(Yaml, "yml");
+
 /// [`YAML`](http://docs.rs/serde_yaml) file format
 ///
 /// File extension is `.yml`.
@@ -31,24 +33,6 @@ pub trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 	#[inline(always)]
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_yaml::from_str(string))
-	}
-}
-
-/// Quickly implement the [`Yaml`] trait.
-///
-/// File extension is `.yml`.
-#[macro_export]
-macro_rules! yaml {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
-		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
-		#[$crate::inherent]
- 		impl $crate::Yaml for $type {
-			const OS_DIRECTORY: $crate::Dir = $dir;
-			const PROJECT_DIRECTORY: &'static str = $project_directory;
-			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = $crate::const_format!("{}.{}", $file_name, "yml");
-		}
 	}
 }
 

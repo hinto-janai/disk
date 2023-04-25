@@ -161,7 +161,7 @@ dependencies = [
 
 [[package]]
 name = "disk"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bincode",
@@ -169,9 +169,9 @@ dependencies = [
  "const_format",
  "directories",
  "flate2",
- "inherent",
  "lazy_static",
  "log",
+ "paste",
  "postcard",
  "rmp-serde",
  "serde",
@@ -229,17 +229,6 @@ checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg",
  "hashbrown",
-]
-
-[[package]]
-name = "inherent"
-version = "1.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20cc83c51f04b1ad3b24cbac53d2ec1a138d699caabe05d315cb8538e8624d01"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.15",
 ]
 
 [[package]]

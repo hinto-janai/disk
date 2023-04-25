@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use crate::common;
 
 //---------------------------------------------------------------------------------------------------- Toml
+crate::common::impl_macro_no_ext!(Empty);
+
 /// [`Empty`] file
 ///
 /// This is a an empty file that
@@ -20,7 +22,6 @@ use crate::common;
 /// ```rust
 /// # use serde::{Serialize,Deserialize};
 /// # use disk::*;
-///
 /// disk::empty!(Hello, Dir::Data, "disk_test", "signal", "hello");
 /// #[derive(Serialize, Deserialize)]
 /// struct Hello {
@@ -61,24 +62,6 @@ pub trait Empty {
 		// Create file.
 		std::fs::File::create(path)?;
 		Ok(())
-	}
-}
-
-/// Quickly implement the [`Empty`] trait.
-///
-/// No file extension.
-#[macro_export]
-macro_rules! empty {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
-		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
-		#[$crate::inherent]
- 		impl $crate::Empty for $type {
-			const OS_DIRECTORY: $crate::Dir = $dir;
-			const PROJECT_DIRECTORY: &'static str = $project_directory;
-			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = $file_name;
-		}
 	}
 }
 

@@ -1,12 +1,14 @@
 //! Disk: [`serde`](https://docs.rs/serde) + [`directories`](https://docs.rs/directories) + various file formats as [`Traits`](https://doc.rust-lang.org/book/ch10-02-traits.html).
 //!
-//! This crate is for (de)serializing to/from various file formats (provided by `serde`) to/from disk locations that follow OS-specific specifications/conventions (provided by `directories`). All errors returned will be an [`anyhow::Error`].
+//! This crate is for (de)serializing to/from various file formats (provided by `serde`) to/from disk locations that follow OS-specific specifications/conventions (provided by `directories`).
 //!
+//! All errors returned will be an [`anyhow::Error`].
 
 //------------------------------------------------------------------------------------------------------------------------
-//! ## Implementing `disk`
+//! # Implementing `disk`
 //! ```rust
 //! use serde::{Serialize, Deserialize};
+//! use disk::Toml;
 //!
 //! #[derive(Serialize,Deserialize)] // <- Your data must implement `serde`.
 //! struct State {
@@ -41,7 +43,7 @@
 //! | Linux   | `/home/alice/.local/share/myproject/state.toml`                  |
 
 //------------------------------------------------------------------------------------------------------------------------
-//! ## `.save()` and `.from_file()`
+//! ### `.save()` and `.from_file()`
 //! These two functions are the basic ways to:
 //! - _Save_ a struct to disk
 //! - _Create_ a struct from disk
@@ -72,7 +74,7 @@
 //! ```
 
 //------------------------------------------------------------------------------------------------------------------------
-//! ## `.save_atomic()`
+//! ### `.save_atomic()`
 //! `disk` provides an `atomic` version of `.save()`.
 //!
 //! Atomic in this context means, the data will be saved to a TEMPORARY file first, then renamed to the associated file.
@@ -89,7 +91,7 @@
 //! Already existing `.tmp` files will be overwritten.
 
 //------------------------------------------------------------------------------------------------------------------------
-//! ## `.save_gzip()` & `.from_file_gzip()`
+//! ### `.save_gzip()` & `.from_file_gzip()`
 //! `disk` provides `gzip` versions of `.save()` and `.from_file()`.
 //!
 //! This saves the file as a compressed file using `gzip`.
@@ -102,7 +104,7 @@
 //! To recover data from this file, you _must_ also use the matching `.from_file_gzip()` when reading the data.
 
 //------------------------------------------------------------------------------------------------------------------------
-//! ## Sub-Directories
+//! ### Sub-Directories
 //! Either a single or multiple sub-directories can be specified with a `/` delimiter.
 //!
 //! `\` is also allowed but ONLY if building on Windows.
@@ -123,7 +125,7 @@
 //! disk::toml!(State, Data, "MyProject", "", "state");
 //! ```
 
-//! ## Manually implementing `disk`
+//! ### Manually implementing `disk`
 //! Manually implementing `disk`'s traits is possible as well. It requires 4 constants to be defined.
 //!
 //! The file extension (`.bin`, `.toml`, `.json`, `.bson`, etc) is inferred based on what trait you use.
@@ -141,7 +143,7 @@
 //! ```
 
 //------------------------------------------------------------------------------------------------------------------------
-//! ## `bincode` Header and Version
+//! ### `bincode` Header and Version
 //! `disk` provides a custom header and versioning feature for the binary format, `bincode`.
 //!
 //! The custom header is an arbitrary `24` byte array that is appended to the front of all files.
@@ -149,7 +151,8 @@
 //! The version is a single `u8` that comes after the header, representing a version from `0-255`.
 //!
 //! These must be passed to the implementation macro.
-//! ## Example
+//!
+//! Example:
 //! ```rust
 //! # use serde::{Serialize, Deserialize};
 //! # use disk::*;
@@ -178,7 +181,7 @@
 //! return an error if it does not match your struct's implementation.
 
 //------------------------------------------------------------------------------------------------------------------------
-//! # File Formats
+//! ### File Formats
 //! No file formats are enabled by default, you must enable them with feature flags.
 //!
 //! Use the `full` feature flag to enable _everything_.
@@ -201,8 +204,8 @@ mod common;
 pub use crate::common::Dir as Dir;
 
 //------ Hidden re-exports
-#[doc(hidden)]
-pub use inherent::inherent as inherent;
+//#[doc(hidden)]
+//pub use inherent::inherent as inherent;
 #[doc(hidden)]
 pub use const_format::assertcp as const_assert;
 #[doc(hidden)]

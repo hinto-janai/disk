@@ -12,6 +12,7 @@ lazy_static::lazy_static! {
 		bincode::DefaultOptions::new().with_varint_encoding();
 }
 
+crate::common::impl_macro_binary!(Bincode, "bin");
 
 /// [`Bincode`](https://docs.rs/bincode) (binary) file format
 ///
@@ -165,25 +166,6 @@ pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	}
 }
 
-/// Quickly implement the [`Bincode`] trait.
-///
-/// File extension is `.bin`.
-#[macro_export]
-macro_rules! bincode {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt, $header:tt, $version:tt) => {
-		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
-		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
-		#[$crate::inherent]
- 		impl $crate::Bincode for $type {
-			const OS_DIRECTORY: $crate::Dir = $dir;
-			const PROJECT_DIRECTORY: &'static str = $project_directory;
-			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = $crate::const_format!("{}.{}", $file_name, "bin");
-			const HEADER: [u8; 24] = $header;
-			const VERSION: u8 = $version;
-		}
-	}
-}
 
 //---------------------------------------------------------------------------------------------------- TESTS
 //#[cfg(test)]

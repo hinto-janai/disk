@@ -7,6 +7,8 @@ use crate::common;
 use rmp_serde::{Deserializer, Serializer};
 
 //---------------------------------------------------------------------------------------------------- Rmp
+crate::common::impl_macro!(MessagePack, "messagepack");
+
 /// [`MessagePack`](https://docs.rs/rmp-serde) (binary) file format
 ///
 /// File extension is `.messagepack`.
@@ -22,24 +24,6 @@ pub trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
 	#[inline(always)]
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		common::convert_error(rmp_serde::encode::to_vec(self))
-	}
-}
-
-/// Quickly implement the [`MessagePack`] trait.
-///
-/// File extension is `.messagepack`.
-#[macro_export]
-macro_rules! messagepack {
-	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
-		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
-		#[$crate::inherent]
- 		impl $crate::MessagePack for $type {
-			const OS_DIRECTORY: $crate::Dir = $dir;
-			const PROJECT_DIRECTORY: &'static str = $project_directory;
-			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = $crate::const_format!("{}.{}", $file_name, "messagepack");
-		}
 	}
 }
 
