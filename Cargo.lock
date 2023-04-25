@@ -174,6 +174,7 @@ dependencies = [
  "paste",
  "postcard",
  "rmp-serde",
+ "ron",
  "serde",
  "serde-pickle",
  "serde_json",
@@ -454,6 +455,17 @@ checksum = "c5b13be192e0220b8afb7222aa5813cb62cc269ebb5cac346ca6487681d2913e"
 dependencies = [
  "byteorder",
  "rmp",
+ "serde",
+]
+
+[[package]]
+name = "ron"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "300a51053b1cb55c80b7a9fde4120726ddf25ca241a1cbb926626f62fb136bff"
+dependencies = [
+ "base64",
+ "bitflags",
  "serde",
 ]
 

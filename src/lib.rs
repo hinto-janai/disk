@@ -111,6 +111,8 @@
 //!
 //! An empty string `""` means NO sub directories.
 //! ```rust,ignore
+//! # #[derive(serde::Serialize,serde::Deserialize)]
+//! # struct State;
 //! # use disk::Dir::Data;
 //! // Windows ... C:\Users\Alice\AppData\Roaming\My_Project\sub1\sub2\state.toml
 //! disk::toml!(State, Data, "MyProject", r"sub1\sub2", "state");
@@ -129,14 +131,16 @@
 //! Manually implementing `disk`'s traits is possible as well. It requires 4 constants to be defined.
 //!
 //! The file extension (`.bin`, `.toml`, `.json`, `.bson`, etc) is inferred based on what trait you use.
-//! ```rust,ignore
+//! ```rust
+//! # #[derive(serde::Serialize,serde::Deserialize)]
+//! # struct State;
 //! impl disk::Toml for State {
 //!     // Which OS directory it will be saved in.
 //! 	const OS_DIRECTORY: disk::Dir = disk::Dir::Data;
 //!     // Which the main project directory is called.
 //! 	const PROJECT_DIRECTORY: &'static str = "MyProject";
 //!     // If it should be in any sub-directories.
-//!     const SUB_DIRECTORIES: &'static str = ""
+//!     const SUB_DIRECTORIES: &'static str = "";
 //!     // What the saved filename will be.
 //! 	const FILE_NAME: &'static str = "state";
 //! }
@@ -146,7 +150,7 @@
 //! ### `bincode` Header and Version
 //! `disk` provides a custom header and versioning feature for the binary format, `bincode`.
 //!
-//! The custom header is an arbitrary `24` byte array that is appended to the front of all files.
+//! The custom header is an arbitrary `24` byte array that is appended to the front of the file.
 //!
 //! The version is a single `u8` that comes after the header, representing a version from `0-255`.
 //!
@@ -196,6 +200,7 @@
 //! | Pickle      | `pickle`
 //! | MessagePack | `messagepack`
 //! | BSON        | `bson`
+//! | RON         | `ron`
 //! | Plain Text  | `plain`
 //! | Empty File  | `empty`
 
@@ -215,49 +220,54 @@ pub use const_format::formatcp as const_format;
 #[cfg(feature = "bincode")]
 mod bincode;
 #[cfg(feature = "bincode")]
-pub use crate::bincode::Bincode as Bincode;
+pub use crate::bincode::Bincode;
 
 #[cfg(feature = "postcard")]
 mod postcard;
 #[cfg(feature = "postcard")]
-pub use crate::postcard::Postcard as Postcard;
+pub use crate::postcard::Postcard;
 
 #[cfg(feature = "json")]
 mod json;
 #[cfg(feature = "json")]
-pub use crate::json::Json as Json;
+pub use crate::json::Json;
 
 #[cfg(feature = "toml")]
 mod toml;
 #[cfg(feature = "toml")]
-pub use crate::toml::Toml as Toml;
+pub use crate::toml::Toml;
 
 #[cfg(feature = "yaml")]
 mod yaml;
 #[cfg(feature = "yaml")]
-pub use crate::yaml::Yaml as Yaml;
+pub use crate::yaml::Yaml;
 
 #[cfg(feature = "pickle")]
 mod pickle;
 #[cfg(feature = "pickle")]
-pub use crate::pickle::Pickle as Pickle;
+pub use crate::pickle::Pickle;
 
 #[cfg(feature = "messagepack")]
 mod messagepack;
 #[cfg(feature = "messagepack")]
-pub use crate::messagepack::MessagePack as MessagePack;
+pub use crate::messagepack::MessagePack;
 
 #[cfg(feature = "bson")]
 mod bson;
 #[cfg(feature = "bson")]
-pub use crate::bson::Bson as Bson;
+pub use crate::bson::Bson;
+
+#[cfg(feature = "ron")]
+mod ron;
+#[cfg(feature = "ron")]
+pub use crate::ron::Ron;
 
 #[cfg(feature = "plain")]
 mod plain;
 #[cfg(feature = "plain")]
-pub use crate::plain::Plain as Plain;
+pub use crate::plain::Plain;
 
 #[cfg(feature = "empty")]
 mod empty;
 #[cfg(feature = "empty")]
-pub use crate::empty::Empty as Empty;
+pub use crate::empty::Empty;

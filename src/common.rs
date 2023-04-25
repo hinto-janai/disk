@@ -722,10 +722,10 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 "]
 			#[macro_export]
 			macro_rules! [<$trait:lower>] {
-				($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
+				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
 					$crate::assert_str!($project_directory, $file_name);
 
-			 		impl $crate::$trait for $type {
+			 		impl $crate::$trait for $data {
 						const OS_DIRECTORY:      $crate::Dir  = $dir;
 						const PROJECT_DIRECTORY: &'static str = $project_directory;
 						const SUB_DIRECTORIES:   &'static str = $sub_directories;
