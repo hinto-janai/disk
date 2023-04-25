@@ -588,14 +588,14 @@ These are the inputs you need to provide to implement [`" $trait "`].
 | `$sub_directories`   | (Optional) sub-directories before file  | [`" $trait "::SUB_DIRECTORIES`]   | [`&str`]           | `\"some/dirs\"`
 | `$file_name`         | The file name to use                    | [`" $trait "::FILE_NAME`]         | [`&str`]           | `\"state\"`
 | `$header`            | `24` custom byte header                 | [`" $trait "::HEADER`]            | `[u8; 24]`         | `[1_u8; 24]`
-| `$version`           | `1` byte custom version                 | [`" $trait "::VERSION`]           | `u8`               | `1_u8`
+| `$version`           | `1` byte custom version                 | [`" $trait "::VERSION`]           | `u8`               | `5_u8`
 
 ### Example
 ```rust
 use serde::{Serialize,Deserialize};
 use disk::*;
 
-const HEADER: [u8; 24] = [255_u8; 24];
+const HEADER: [u8; 24] = [1_u8; 24];
 const VERSION: u8 = 5;
 
 " $trait:lower "!(State, Dir::Data, \"MyProject\", \"some/dirs\", \"state\", HEADER, VERSION);

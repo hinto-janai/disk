@@ -156,7 +156,7 @@
 //! ```rust
 //! # use serde::{Serialize, Deserialize};
 //! # use disk::*;
-//! const HEADER: [u8; 24] = [255_u8; 24];
+//! const HEADER: [u8; 24] = [1_u8; 24];
 //! const VERSION: u8 = 5;
 //!
 //! // Define.
