@@ -378,7 +378,7 @@ macro_rules! impl_common {
 		/// This deletes _all_ directories starting from [`Self::PROJECT_DIRECTORY`].
 		/// For example:
 		/// ```rust,ignore
-		/// toml_file!(State, Dir::Data, "MyProject", "sub_dir", "state");
+		/// disk::toml!(State, disk::Dir::Data, "MyProject", "sub_dir", "state");
 		/// ```
 		/// This project's file would be located at `~/.local/share/myproject`.
 		/// This is the `PATH` that gets removed recursively.
@@ -427,9 +427,8 @@ macro_rules! impl_common {
 		/// You can also access this directly on your type:
 		/// ```rust
 		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::{Toml,toml_file};
-		/// # use disk::prelude::*;
-		/// toml_file!(Data, Dir::Cache, "MyProject", "", "data");
+		/// # use disk::*;
+		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
 		/// #[derive(Serialize, Deserialize)]
 		/// struct Data(u64);
 		///
@@ -445,9 +444,8 @@ macro_rules! impl_common {
 		/// You can also access this directly on your type:
 		/// ```rust
 		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::{Toml,toml_file};
-		/// # use disk::prelude::*;
-		/// toml_file!(Data, Dir::Cache, "MyProject", "sub_directory", "data");
+		/// # use disk::*;
+		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "sub_directory", "data");
 		/// #[derive(Serialize, Deserialize)]
 		/// struct Data(u64);
 		///
@@ -463,9 +461,8 @@ macro_rules! impl_common {
 		/// You can also access this directly on your type:
 		/// ```rust
 		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::{Toml,toml_file};
-		/// # use disk::prelude::*;
-		/// toml_file!(Data, Dir::Cache, "MyProject", "", "data");
+		/// # use disk::*;
+		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
 		/// #[derive(Serialize, Deserialize)]
 		/// struct Data(u64);
 		///

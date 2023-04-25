@@ -1,11 +1,11 @@
-//! Disk: [`serde`](https://docs.rs/serde) + [`directories`](https://docs.rs/directories) + a whole bunch of file formats as [`Traits`](https://doc.rust-lang.org/book/ch10-02-traits.html).
+//! Disk: [`serde`](https://docs.rs/serde) + [`directories`](https://docs.rs/directories) + various file formats as [`Traits`](https://doc.rust-lang.org/book/ch10-02-traits.html).
 //!
 //! This crate is for (de)serializing to/from various file formats (provided by `serde`) to/from disk locations that follow OS-specific specifications/conventions (provided by `directories`). All errors returned will be an [`anyhow::Error`].
 //!
-//! Example of data being saved on the user's disk for future use:
-//! ```rust,ignore
-//! use disk::prelude::*;       // Necessary imports to get things working.
-//! use disk::{Toml,toml_file}; // <- TOML trait & macro.
+
+//------------------------------------------------------------------------------------------------------------------------
+//! ## Implementing `disk`
+//! ```rust
 //! use serde::{Serialize, Deserialize};
 //!
 //! #[derive(Serialize,Deserialize)] // <- Your data must implement `serde`.
@@ -15,43 +15,116 @@
 //! }
 //! // To make this struct a file, use the following macro:
 //! //
-//! // |- 1. The file format used will be TOML.
-//! // |
-//! // |          |- 2. The struct "State" will be used.
-//! // |          |
-//! // |          |      |- 3. It will be saved in the OS Data directory.
-//! // |          |      |
-//! // |          |      |          |- 4. The main project directory is called "MyProject".
-//! // |          |      |          |
-//! // |          |      |          |            |- 6. It won't be in any sub-directories.
-//! // |          |      |          |            |
-//! // |          |      |          |            |   |- 7. The file name will be "state.toml".
-//! // v          v      v          v            v   v
-//!    toml_file!(State, Dir::Data, "MyProject", "", "state");
+//! //    |- 1. The file format used will be TOML.
+//! //    |
+//! //    |     |- 2. This is implemented for the struct "State".
+//! //    |     |
+//! //    |     |      |- 3. It will be saved in the OS Data directory.
+//! //    |     |      |
+//! //    |     |      |                 |- 4. The main project directory is called "MyProject".
+//! //    |     |      |                 |
+//! //    |     |      |                 |            |- 6. It won't be in any sub-directories.
+//! //    |     |      |                 |            |
+//! //    |     |      |                 |            |   |- 7. The file name will be "state.toml".
+//! //    v     v      v                 v            v   v
+//! disk::toml!(State, disk::Dir::Data, "MyProject", "", "state");
+//! ```
 //!
-//! // Now our `State` struct implements the `Toml` trait.
-//! //
-//! // The PATH would look something like:
-//! // Windows | C:\Users\Alice\AppData\Roaming\My_Project\state.toml
-//! // macOS   | /Users/Alice/Library/Application Support/My-Project/state.toml
-//! // Linux   | /home/alice/.local/share/myproject/state.toml
+//! Now our `State` struct implements the `Toml` trait.
 //!
-//! // I'd like to save this to disk, since I'll use it next time.
+//! The PATH the file would be saved in would be:
+//!
+//! | OS      | PATH                                                             |
+//! |---------|------------------------------------------------------------------|
+//! | Windows | `C:\Users\Alice\AppData\Roaming\My_Project\state.toml`           |
+//! | macOS   | `/Users/Alice/Library/Application Support/My-Project/state.toml` |
+//! | Linux   | `/home/alice/.local/share/myproject/state.toml`                  |
+
+//------------------------------------------------------------------------------------------------------------------------
+//! ## `.save()` and `.from_file()`
+//! These two functions are the basic ways to:
+//! - _Save_ a struct to disk
+//! - _Create_ a struct from disk
+//! ```rust
+//! # use serde::{Serialize, Deserialize};
+//! # use disk::*;
+//! #
+//! # disk::toml!(State, disk::Dir::Data, "MyProject", "", "state");
+//! # #[derive(PartialEq,Serialize,Deserialize)]
+//! # struct State {
+//! #    string: String,
+//! #    number: u32,
+//! # }
+//! // Create our struct.
 //! let my_state = State { string: "Hello".to_string(), number: 123 };
 //!
-//! // Since our `State` struct implements the `Toml` trait, it can do that:
+//! // Save our `State` as a `Toml` file.
 //! match my_state.save() {
 //! 	Ok(_) => println!("We saved to disk"),
 //! 	Err(e) => eprintln!("We failed to save to disk"),
 //! }
 //!
 //! // Let's create a new `State` by reading the file that we just created:
-//! let new_state = State::from_file().expect("Failed to read disk");
+//! let from_disk = State::from_file().expect("Failed to read disk");
 //!
 //! // These should be the same.
-//! assert!(my_state == new_state);
+//! assert!(my_state == from_disk);
 //! ```
-//! Manually implementing these traits is possible as well, it requires 4 constants to be defined.
+
+//------------------------------------------------------------------------------------------------------------------------
+//! ## `.save_atomic()`
+//! `disk` provides an `atomic` version of `.save()`.
+//!
+//! Atomic in this context means, the data will be saved to a TEMPORARY file first, then renamed to the associated file.
+//!
+//! This lowers the chance for data corruption on interrupt.
+//!
+//! The temporary file is removed if the rename fails.
+//!
+//! The temporary file name is: `file_name` + `extension` + `.tmp`, for example:
+//! ```text,ignore
+//! config.toml     // <- Real file
+//! config.toml.tmp // <- Temporary version
+//! ```
+//! Already existing `.tmp` files will be overwritten.
+
+//------------------------------------------------------------------------------------------------------------------------
+//! ## `.save_gzip()` & `.from_file_gzip()`
+//! `disk` provides `gzip` versions of `.save()` and `.from_file()`.
+//!
+//! This saves the file as a compressed file using `gzip`.
+//!
+//! This will suffix the file with `.gz`, for example:
+//! ```text,ignore
+//! config.json    // Normal file name with `.save()`
+//! config.json.gz // File name when using `.save_gzip()`
+//! ```
+//! To recover data from this file, you _must_ also use the matching `.from_file_gzip()` when reading the data.
+
+//------------------------------------------------------------------------------------------------------------------------
+//! ## Sub-Directories
+//! Either a single or multiple sub-directories can be specified with a `/` delimiter.
+//!
+//! `\` is also allowed but ONLY if building on Windows.
+//!
+//! An empty string `""` means NO sub directories.
+//! ```rust,ignore
+//! # use disk::Dir::Data;
+//! // Windows ... C:\Users\Alice\AppData\Roaming\My_Project\sub1\sub2\state.toml
+//! disk::toml!(State, Data, "MyProject", r"sub1\sub2", "state");
+//!
+//! // macOS ... /Users/Alice/Library/Application Support/My-Project/sub1/sub2/state.json
+//! disk::json!(State, Data, "MyProject", "sub1/sub2", "state");
+//!
+//! // Linux ... /home/alice/.local/share/myproject/sub1/sub2/state.yml
+//! disk::yaml!(State, Data, "MyProject", "sub1/sub2", "state");
+//!
+//! // NO sub directory:
+//! disk::toml!(State, Data, "MyProject", "", "state");
+//! ```
+
+//! ## Manually implementing `disk`
+//! Manually implementing `disk`'s traits is possible as well. It requires 4 constants to be defined.
 //!
 //! The file extension (`.bin`, `.toml`, `.json`, `.bson`, etc) is inferred based on what trait you use.
 //! ```rust,ignore
@@ -66,29 +139,49 @@
 //! 	const FILE_NAME: &'static str = "state";
 //! }
 //! ```
+
+//------------------------------------------------------------------------------------------------------------------------
+//! ## `bincode` Header and Version
+//! `disk` provides a custom header and versioning feature for the binary format, `bincode`.
 //!
-//! Either a single or multiple sub-directories can be specified with a `/` delimiter.
+//! The custom header is an arbitrary `24` byte array that is appended to the front of all files.
 //!
-//! `\` is also allowed but ONLY if building on Windows.
+//! The version is a single `u8` that comes after the header, representing a version from `0-255`.
 //!
-//! An empty string `""` means NO sub directories.
-//! ```rust,ignore
-//! # use disk::Dir::Data;
-//! // Windows ... C:\Users\Alice\AppData\Roaming\My_Project\sub1\sub2\state.toml
-//! toml_file!(State, Data, "MyProject", r"sub1\sub2", "state");
+//! These must be passed to the implementation macro.
+//! ## Example
+//! ```rust
+//! # use serde::{Serialize, Deserialize};
+//! # use disk::*;
+//! const HEADER: [u8; 24] = [255_u8; 24];
+//! const VERSION: u8 = 5;
 //!
-//! // macOS ... /Users/Alice/Library/Application Support/My-Project/sub1/sub2/state.json
-//! json_file!(State, Data, "MyProject", "sub1/sub2", "state");
+//! // Define.
+//! disk::bincode!(State, disk::Dir::Data, "MyProject", "", "state", HEADER, VERSION);
+//! #[derive(Serialize,Deserialize)]
+//! struct State {
+//! 	string: String,
+//! 	number: u32,
+//! }
 //!
-//! // Linux ... /home/alice/.local/share/myproject/sub1/sub2/state.yml
-//! yaml_file!(State, Data, "MyProject", "sub1/sub2", "state");
+//! // Save file.
+//! let state = State { string: "Hello".to_string(), number: 123 };
+//! state.save().unwrap();
 //!
-//! // NO sub directory:
-//! toml_file!(State, Data, "MyProject", "", "state");
+//! // Assert the file's header+version on
+//! // disk is correct and extract our version.
+//! let version = State::file_version().unwrap();
+//! assert!(version == State::VERSION);
 //! ```
-//!
+//! The header and version make up the first `25` bytes of the file, byte `1..=24` being the header and
+//! byte `25` being the version. These bytes are checked upon using any `.from_file()` variant and will
+//! return an error if it does not match your struct's implementation.
+
+//------------------------------------------------------------------------------------------------------------------------
 //! # File Formats
-//! Use the feature flag `full` to enable _everything_.
+//! No file formats are enabled by default, you must enable them with feature flags.
+//!
+//! Use the `full` feature flag to enable _everything_.
 //!
 //! | File Format | Feature flag to enable |
 //! |-------------|------------------------|
@@ -103,27 +196,19 @@
 //! | Plain Text  | `plain`
 //! | Empty File  | `empty`
 
-//
-// The "project" directory is taken from the `CARGO_PKG_NAME` environment variable, which should match the `[package.name]` key in your `Cargo.toml`, for example:
-// ```toml,ignore
-// [package]
-// name = "my_project"
-// ```
-// This would create a directory like so:
-// ```text,ignore
-// Windows | C:\Users\Alice\AppData\Roaming\My_Project\
-// macOS   | /Users/Alice/Library/Application Support/My-Project/
-// Linux   | /home/alice/.local/share/myproject/
-// ```
-
+//------ Common
 mod common;
-//pub use disk_derive::*;
-pub mod prelude {
-	pub use crate::common::Dir as Dir;
-	pub use const_format::assertcp as const_assert;
-	pub use const_format::formatcp as const_format;
-}
+pub use crate::common::Dir as Dir;
 
+//------ Hidden re-exports
+#[doc(hidden)]
+pub use inherent::inherent as inherent;
+#[doc(hidden)]
+pub use const_format::assertcp as const_assert;
+#[doc(hidden)]
+pub use const_format::formatcp as const_format;
+
+//------ File formats
 #[cfg(feature = "bincode")]
 mod bincode;
 #[cfg(feature = "bincode")]

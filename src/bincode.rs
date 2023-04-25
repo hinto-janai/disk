@@ -35,6 +35,16 @@ pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 			bail!("Invalid Bincode header data, total byte length less than 25: {}", len);
 		}
 
+		// Ensure our HEADER is correct.
+		if bytes[..24] != Self::HEADER {
+			bail!("Incorrect Bincode header, expected: {:?}, found: {:?}", Self::HEADER, &bytes[..24],);
+		}
+
+		// Ensure our VERSION is correct.
+		if bytes[24] != Self::VERSION {
+			bail!("Incorrect Bincode version, expected: {:?}, found: {:?}", Self::VERSION, &bytes[24],);
+		}
+
 		common::convert_error(ENCODING_OPTIONS.deserialize(&bytes[25..]))
 	}
 
@@ -101,7 +111,7 @@ pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	fn file_header_to_string(&self) -> Result<String, anyhow::Error> {
 		let bytes = Self::file_bytes(0..24)?;
 
-		Ok(String::from_utf8(bytes.to_vec())?)
+		Ok(String::from_utf8(bytes)?)
 	}
 
 	#[inline]
@@ -159,15 +169,16 @@ pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 ///
 /// File extension is `.bin`.
 #[macro_export]
-macro_rules! bincode_file {
+macro_rules! bincode {
 	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt, $header:tt, $version:tt) => {
-		const_assert!(const_format!("{}", $project_directory).len() != 0);
-		const_assert!(const_format!("{}", $file_name).len() != 0);
- 		impl Bincode for $type {
-			const OS_DIRECTORY: Dir = $dir;
+		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
+		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
+		#[$crate::inherent]
+ 		impl $crate::Bincode for $type {
+			const OS_DIRECTORY: $crate::Dir = $dir;
 			const PROJECT_DIRECTORY: &'static str = $project_directory;
 			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = const_format!("{}.{}", $file_name, "bin");
+			const FILE_NAME: &'static str = $crate::const_format!("{}.{}", $file_name, "bin");
 			const HEADER: [u8; 24] = $header;
 			const VERSION: u8 = $version;
 		}

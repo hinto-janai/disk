@@ -19,10 +19,9 @@ use crate::common;
 /// The file created will have _no_ file extension, e.g:
 /// ```rust
 /// # use serde::{Serialize,Deserialize};
-/// # use disk::{Empty,empty_file};
-/// # use disk::prelude::*;
+/// # use disk::*;
 ///
-/// empty_file!(Hello, Dir::Data, "disk_test", "signal", "hello");
+/// disk::empty!(Hello, Dir::Data, "disk_test", "signal", "hello");
 /// #[derive(Serialize, Deserialize)]
 /// struct Hello {
 ///     data: bool,
@@ -69,12 +68,13 @@ pub trait Empty {
 ///
 /// No file extension.
 #[macro_export]
-macro_rules! empty_file {
+macro_rules! empty {
 	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-		const_assert!(const_format!("{}", $project_directory).len() != 0);
-		const_assert!(const_format!("{}", $file_name).len() != 0);
- 		impl Empty for $type {
-			const OS_DIRECTORY: Dir = $dir;
+		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
+		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
+		#[$crate::inherent]
+ 		impl $crate::Empty for $type {
+			const OS_DIRECTORY: $crate::Dir = $dir;
 			const PROJECT_DIRECTORY: &'static str = $project_directory;
 			const SUB_DIRECTORIES: &'static str = $sub_directories;
 			const FILE_NAME: &'static str = $file_name;

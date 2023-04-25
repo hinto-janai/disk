@@ -1,6 +1,6 @@
 [package]
 name = "disk"
-version = "0.0.7"
+version = "0.1.0"
 edition = "2021"
 authors = ["hinto.janai <hinto.janai@protonmail.com>"]
 description = "(De)serialize files to/from disk"
@@ -33,6 +33,7 @@ serde       = { version = "1.0.160", features = ["derive"] }
 const_format = { version = "0.2.30", features = ["rust_1_51", "assertcp", "rust_1_64"] }
 flate2 = "1.0.25"
 lazy_static = "1.4.0"
+inherent = "1.0.7"
 
 # Optional.
 log          = { version = "0.4.17", optional = true }

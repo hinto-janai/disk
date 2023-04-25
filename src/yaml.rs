@@ -38,15 +38,16 @@ pub trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 ///
 /// File extension is `.yml`.
 #[macro_export]
-macro_rules! yaml_file {
+macro_rules! yaml {
 	($type:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-		const_assert!(const_format!("{}", $project_directory).len() != 0);
-		const_assert!(const_format!("{}", $file_name).len() != 0);
- 		impl Yaml for $type {
-			const OS_DIRECTORY: Dir = $dir;
+		$crate::const_assert!($crate::const_format!("{}", $project_directory).len() != 0);
+		$crate::const_assert!($crate::const_format!("{}", $file_name).len() != 0);
+		#[$crate::inherent]
+ 		impl $crate::Yaml for $type {
+			const OS_DIRECTORY: $crate::Dir = $dir;
 			const PROJECT_DIRECTORY: &'static str = $project_directory;
 			const SUB_DIRECTORIES: &'static str = $sub_directories;
-			const FILE_NAME: &'static str = const_format!("{}.{}", $file_name, "yml");
+			const FILE_NAME: &'static str = $crate::const_format!("{}.{}", $file_name, "yml");
 		}
 	}
 }
