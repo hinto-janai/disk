@@ -43,12 +43,12 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 
 		// Ensure our HEADER is correct.
 		if bytes[..24] != Self::HEADER {
-			bail!("Incorrect Bincode header, expected: {:?}, found: {:?}", Self::HEADER, &bytes[..24],);
+			bail!("Incorrect Bincode header\nExpected: {:?}\nFound: {:?}", Self::HEADER, &bytes[..24],);
 		}
 
 		// Ensure our VERSION is correct.
 		if bytes[24] != Self::VERSION {
-			bail!("Incorrect Bincode version, expected: {:?}, found: {:?}", Self::VERSION, &bytes[24],);
+			bail!("Incorrect Bincode version\nExpected: {:?}\nFound: {:?}", Self::VERSION, &bytes[24],);
 		}
 
 		common::convert_error(ENCODING_OPTIONS.deserialize(&bytes[25..]))

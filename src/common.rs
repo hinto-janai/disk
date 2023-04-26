@@ -131,15 +131,31 @@ macro_rules! impl_io {
 		}
 
 		#[inline(always)]
-		/// Read the file directly as bytes and turn into a Rust structure.
+		/// Read the file as bytes and deserialize into [`Self`].
 		fn from_file() -> Result<Self, anyhow::Error> {
 			Ok(Self::from_bytes(&Self::read_to_bytes()?)?)
 		}
 
 		#[inline(always)]
-		/// Read the file directly as bytes, decompress with `gzip` and turn into a Rust structure.
+		/// Read the file as bytes, decompress with `gzip` and deserialize into [`Self`].
 		fn from_file_gzip() -> Result<Self, anyhow::Error> {
 			Ok(Self::from_bytes(&Self::read_to_bytes_gzip()?)?)
+		}
+
+		#[inline(always)]
+		/// Read the file using [`memmap2`](https://docs.rs/memmap2) and deserialize into [`Self`].
+		///
+		/// ## Safety
+		/// Using this function can be much faster than [`Self::from_file`] but
+		/// you _must_ understand this all the invariants that `memmap` comes with.
+		///
+		/// When these invariants are broken, _Undefined Behavior_ (UB) will occur.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn from_file_memmap() -> Result<Self, anyhow::Error> {
+			let file = std::fs::File::open(Self::absolute_path()?)?;
+			let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
+			Ok(Self::from_bytes(&*mmap)?)
 		}
 
 		/// Try saving as a file.
@@ -270,7 +286,7 @@ macro_rules! impl_io {
 		/// config.toml.tmp // <- Temporary version
 		/// ```
 		/// Already existing `.tmp` files will be overwritten.
-		fn rm_atomic(&self) -> Result<(), anyhow::Error> {
+		fn rm_atomic() -> Result<(), anyhow::Error> {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
@@ -286,7 +302,7 @@ macro_rules! impl_io {
 		}
 
 		/// Same as [`Self::rm_atomic()`] but looks for the `.gz` extension.
-		fn rm_atomic_gzip(&self) -> Result<(), anyhow::Error> {
+		fn rm_atomic_gzip() -> Result<(), anyhow::Error> {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
