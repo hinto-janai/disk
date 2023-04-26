@@ -20,11 +20,13 @@ pub unsafe trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
 	common::impl_binary!("messagepack");
 
 	#[inline(always)]
+	/// Create a `struct/enum` from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		common::convert_error(rmp_serde::decode::from_slice(bytes))
 	}
 
 	#[inline(always)]
+	/// Convert a `struct/enum` to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		common::convert_error(rmp_serde::encode::to_vec(self))
 	}

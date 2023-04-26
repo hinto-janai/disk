@@ -3,54 +3,10 @@ use anyhow::{anyhow,bail,ensure,Error};
 use directories::ProjectDirs;
 use serde::{Serialize,Deserialize};
 use std::path::{Path,PathBuf};
+use crate::Dir;
 
 //---------------------------------------------------------------------------------------------------- Constants
 pub(crate) const DASH: &str = "--------------------------------------------";
-
-//---------------------------------------------------------------------------------------------------- Types of User Dirs
-/// The different types of OS directories, provided by [`directories`](https://docs.rs/directories)
-#[derive(Copy,Clone,Debug,Default,Hash,PartialEq,Eq,PartialOrd,Ord,Serialize,Deserialize)]
-pub enum Dir {
-	/// |Platform | Value                                                                 | Example                                             |
-	/// | ------- | --------------------------------------------------------------------- | --------------------------------------------------- |
-	/// | Linux   | `$XDG_CACHE_HOME`/`_project_path_` or `$HOME`/.cache/`_project_path_` | /home/alice/.cache/barapp                           |
-	/// | macOS   | `$HOME`/Library/Caches/`_project_path_`                               | /Users/Alice/Library/Caches/com.Foo-Corp.Bar-App    |
-	/// | Windows | `{FOLDERID_LocalAppData}`\\`_project_path_`\\cache                    | C:\Users\Alice\AppData\Local\Foo Corp\Bar App\cache |
-	Project,
-	/// |Platform | Value                                                                 | Example                                             |
-	/// | ------- | --------------------------------------------------------------------- | --------------------------------------------------- |
-	/// | Linux   | `$XDG_CACHE_HOME`/`_project_path_` or `$HOME`/.cache/`_project_path_` | /home/alice/.cache/barapp                           |
-	/// | macOS   | `$HOME`/Library/Caches/`_project_path_`                               | /Users/Alice/Library/Caches/com.Foo-Corp.Bar-App    |
-	/// | Windows | `{FOLDERID_LocalAppData}`\\`_project_path_`\\cache                    | C:\Users\Alice\AppData\Local\Foo Corp\Bar App\cache |
-	Cache,
-	/// |Platform | Value                                                                   | Example                                                        |
-	/// | ------- | ----------------------------------------------------------------------- | -------------------------------------------------------------- |
-	/// | Linux   | `$XDG_CONFIG_HOME`/`_project_path_` or `$HOME`/.config/`_project_path_` | /home/alice/.config/barapp                                     |
-	/// | macOS   | `$HOME`/Library/Application Support/`_project_path_`                    | /Users/Alice/Library/Application Support/com.Foo-Corp.Bar-App  |
-	/// | Windows | `{FOLDERID_RoamingAppData}`\\`_project_path_`\\config                   | C:\Users\Alice\AppData\Roaming\Foo Corp\Bar App\config         |
-	Config,
-	/// This is the default value.
-	///
-	/// |Platform | Value                                                                      | Example                                                       |
-	/// | ------- | -------------------------------------------------------------------------- | ------------------------------------------------------------- |
-	/// | Linux   | `$XDG_DATA_HOME`/`_project_path_` or `$HOME`/.local/share/`_project_path_` | /home/alice/.local/share/barapp                               |
-	/// | macOS   | `$HOME`/Library/Application Support/`_project_path_`                       | /Users/Alice/Library/Application Support/com.Foo-Corp.Bar-App |
-	/// | Windows | `{FOLDERID_RoamingAppData}`\\`_project_path_`\\data                        | C:\Users\Alice\AppData\Roaming\Foo Corp\Bar App\data          |
-	#[default]
-	Data,
-	/// |Platform | Value                                                                      | Example                                                       |
-	/// | ------- | -------------------------------------------------------------------------- | ------------------------------------------------------------- |
-	/// | Linux   | `$XDG_DATA_HOME`/`_project_path_` or `$HOME`/.local/share/`_project_path_` | /home/alice/.local/share/barapp                               |
-	/// | macOS   | `$HOME`/Library/Application Support/`_project_path_`                       | /Users/Alice/Library/Application Support/com.Foo-Corp.Bar-App |
-	/// | Windows | `{FOLDERID_LocalAppData}`\\`_project_path_`\\data                          | C:\Users\Alice\AppData\Local\Foo Corp\Bar App\data            |
-	DataLocal,
-	/// |Platform | Value                                                                   | Example                                                |
-	/// | ------- | ----------------------------------------------------------------------- | ------------------------------------------------------ |
-	/// | Linux   | `$XDG_CONFIG_HOME`/`_project_path_` or `$HOME`/.config/`_project_path_` | /home/alice/.config/barapp                             |
-	/// | macOS   | `$HOME`/Library/Preferences/`_project_path_`                            | /Users/Alice/Library/Preferences/com.Foo-Corp.Bar-App  |
-	/// | Windows | `{FOLDERID_RoamingAppData}`\\`_project_path_`\\config                   | C:\Users\Alice\AppData\Roaming\Foo Corp\Bar App\config |
-	Preference,
-}
 
 //---------------------------------------------------------------------------------------------------- Common Functions.
 #[inline(always)]
@@ -345,7 +301,7 @@ pub(crate) use impl_io;
 macro_rules! impl_common {
 	($file_ext:literal) => {
 		/// Which OS directory it will be saved in.
-		const OS_DIRECTORY: common::Dir;
+		const OS_DIRECTORY: $crate::Dir;
 		/// What the main project directory will be.
 		const PROJECT_DIRECTORY: &'static str;
 		/// Optional sub directories in between the project directory and file.
@@ -419,142 +375,6 @@ macro_rules! impl_common {
 			let path = Self::absolute_path()?;
 
 			Ok(path.exists())
-		}
-
-		#[inline(always)]
-		/// The main project directory.
-		///
-		/// You can also access this directly on your type:
-		/// ```rust
-		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::*;
-		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
-		/// #[derive(Serialize, Deserialize)]
-		/// struct Data(u64);
-		///
-		/// assert!(Data::project_dir() == Data::PROJECT_DIRECTORY);
-		/// ```
-		fn project_dir() -> &'static str {
-			Self::PROJECT_DIRECTORY
-		}
-
-		#[inline(always)]
-		/// The directories after the main project directory, before the file. (the first directory specified in the SUB_DIRECTORIES constant).
-		///
-		/// You can also access this directly on your type:
-		/// ```rust
-		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::*;
-		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "sub_directory", "data");
-		/// #[derive(Serialize, Deserialize)]
-		/// struct Data(u64);
-		///
-		/// assert!(Data::sub_dirs() == Data::SUB_DIRECTORIES);
-		/// ```
-		fn sub_dirs() -> &'static str {
-			Self::SUB_DIRECTORIES
-		}
-
-		#[inline(always)]
-		/// The filename + extension associated with this struct.
-		///
-		/// You can also access this directly on your type:
-		/// ```rust
-		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::*;
-		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
-		/// #[derive(Serialize, Deserialize)]
-		/// struct Data(u64);
-		///
-		/// assert!(Data::file_name() == Data::FILE_NAME);
-		/// ```
-		fn file_name() -> &'static str {
-			Self::FILE_NAME
-		}
-
-		#[inline(always)]
-		/// The extension associated with this struct.
-		///
-		/// You can also access this directly on your type:
-		/// ```rust
-		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::*;
-		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
-		/// #[derive(Serialize, Deserialize)]
-		/// struct Data(u64);
-		///
-		/// assert!(Data::file_ext() == Data::FILE_EXT);
-		/// ```
-		fn file_ext() -> &'static str {
-			Self::FILE_EXT
-		}
-
-		#[inline(always)]
-		/// The file associated with this struct **WITHOUT** the extension.
-		///
-		/// You can also access this directly on your type:
-		/// ```rust
-		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::*;
-		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
-		/// #[derive(Serialize, Deserialize)]
-		/// struct Data(u64);
-		///
-		/// assert!(Data::file() == Data::FILE);
-		/// ```
-		fn file() -> &'static str {
-			Self::FILE
-		}
-
-		#[inline(always)]
-		/// The `gzip` variant of the filename + extension associated with this struct.
-		///
-		/// You can also access this directly on your type:
-		/// ```rust
-		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::*;
-		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
-		/// #[derive(Serialize, Deserialize)]
-		/// struct Data(u64);
-		///
-		/// assert!(Data::file_gzip() == Data::FILE_NAME_GZIP);
-		/// ```
-		fn file_gzip() -> &'static str {
-			Self::FILE_NAME_GZIP
-		}
-
-		#[inline(always)]
-		/// The `tmp` variant of the filename + extension associated with this struct.
-		///
-		/// You can also access this directly on your type:
-		/// ```rust
-		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::*;
-		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
-		/// #[derive(Serialize, Deserialize)]
-		/// struct Data(u64);
-		///
-		/// assert!(Data::file_tmp() == Data::FILE_NAME_TMP);
-		/// ```
-		fn file_tmp() -> &'static str {
-			Self::FILE_NAME_TMP
-		}
-
-		#[inline(always)]
-		/// The `gzip` + `tmp` variant of the filename + extension associated with this struct.
-		///
-		/// You can also access this directly on your type:
-		/// ```rust
-		/// # use serde::{Serialize,Deserialize};
-		/// # use disk::*;
-		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
-		/// #[derive(Serialize, Deserialize)]
-		/// struct Data(u64);
-		///
-		/// assert!(Data::file_gzip_tmp() == Data::FILE_NAME_GZIP_TMP);
-		/// ```
-		fn file_gzip_tmp() -> &'static str {
-			Self::FILE_NAME_GZIP_TMP
 		}
 
 		/// The base path associated with this struct (PATH leading up to the file).
@@ -642,9 +462,7 @@ pub(crate) use impl_binary;
 #[macro_export]
 macro_rules! assert_str {
 	($project_directory:tt, $file_name:tt) => {
-		#[allow(clippy::wrong_self_convention)]
 		$crate::const_assert!($project_directory.len() != 0, "disk: 'Project Directory' must not be an empty string!");
-		#[allow(clippy::wrong_self_convention)]
 		$crate::const_assert!($file_name.len() != 0, "disk: 'File Name' must not be an empty string!");
 	}
 }
@@ -652,7 +470,7 @@ macro_rules! assert_str {
 // Binary files.
 macro_rules! impl_macro_binary {
 	($trait:ident, $file_ext:literal) => {
-		use common::Dir;
+		use $crate::Dir;
 		paste::item! {
 			#[doc = "
 Implement the [`" $trait "`] trait
@@ -720,7 +538,7 @@ pub(crate) use impl_macro_binary;
 // Empty (no extension) file.
 macro_rules! impl_macro_no_ext {
 	($trait:ident) => {
-		use common::Dir;
+		use $crate::Dir;
 		paste::item! {
 			#[doc = "
 Implement the [`" $trait "`] trait
@@ -781,7 +599,7 @@ pub(crate) use impl_macro_no_ext;
 // Regular files.
 macro_rules! impl_macro {
 	($trait:ident, $file_ext:literal) => {
-		use common::Dir;
+		use $crate::Dir;
 		paste::item! {
 			#[doc = "
 Implement the [`" $trait "`] trait

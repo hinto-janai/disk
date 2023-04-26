@@ -19,11 +19,13 @@ pub unsafe trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
 	common::impl_binary!("pickle");
 
 	#[inline(always)]
+	/// Create a `struct/enum` from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_pickle::de::from_slice(bytes, serde_pickle::de::DeOptions::new()))
 	}
 
 	#[inline(always)]
+	/// Convert a `struct/enum` to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		common::convert_error(serde_pickle::ser::to_vec(self, serde_pickle::ser::SerOptions::new()))
 	}

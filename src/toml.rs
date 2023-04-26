@@ -32,6 +32,8 @@ pub unsafe trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 
 	// TOML operations.
 	#[inline(always)]
+	/// Convert a `struct/enum` to a [`String`].
+	///
 	/// This uses [`toml_edit::ser::to_string_pretty`];
 	fn to_string(&self) -> Result<String, anyhow::Error> {
 		common::convert_error(toml_edit::ser::to_string_pretty(self))

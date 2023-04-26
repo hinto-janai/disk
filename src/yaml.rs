@@ -18,22 +18,28 @@ pub unsafe trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 
 	// Required functions for generic-ness.
 	#[inline(always)]
+	/// Convert a `struct/enum` to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		let mut vec = Vec::with_capacity(128);
 		serde_yaml::to_writer(&mut vec, self)?;
 		Ok(vec)
 	}
 	#[inline(always)]
+	/// Create a `struct/enum` from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_yaml::from_slice(bytes))
 	}
 
 	// YAML operations.
 	#[inline(always)]
+	/// Convert a `struct/enum` to a [`String`].
+	///
+	/// This uses [`toml_edit::ser::to_string_pretty`];
 	fn to_string(&self) -> Result<String, anyhow::Error> {
 		common::convert_error(serde_yaml::to_string(self))
 	}
 	#[inline(always)]
+	/// Create a `struct/enum` from [`String`].
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_yaml::from_str(string))
 	}

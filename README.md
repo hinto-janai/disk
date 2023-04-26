@@ -3,7 +3,10 @@
 
 Disk: [`serde`](https://docs.rs/serde) + [`directories`](https://docs.rs/directories) + various file formats as [`Traits`](https://doc.rust-lang.org/book/ch10-02-traits.html).
 
-This crate is for (de)serializing to/from various file formats (provided by `serde`) to/from disk locations that follow OS-specific specifications/conventions (provided by `directories`).
+This crate is for:
+
+- (De)serializing various file formats (provided by `serde`)
+- To/from disk locations that follow OS specifications (provided by `directories`)
 
 All errors returned are of type [`anyhow::Error`](https://github.com/dtolnay/anyhow).
 
