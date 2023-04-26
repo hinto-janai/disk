@@ -29,7 +29,7 @@ crate::common::impl_macro_no_ext!(Empty);
 /// }
 ///
 /// // The filename should be "hello".
-/// assert!(Hello::file_name() == "hello");
+/// assert!(Hello::FILE_NAME == "hello");
 ///
 /// // Create the file.
 /// Hello::touch().unwrap();
