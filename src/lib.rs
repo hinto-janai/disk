@@ -223,13 +223,48 @@
 //! | Plain Text  | `plain`
 //! | Empty File  | `empty`
 
+//------ Lints
+#![forbid(
+	future_incompatible,
+	let_underscore,
+	break_with_label_and_loop,
+	coherence_leak_check,
+	deprecated,
+	duplicate_macro_attributes,
+	exported_private_dependencies,
+	for_loops_over_fallibles,
+	large_assignments,
+	overlapping_range_endpoints,
+	private_in_public,
+	semicolon_in_expressions_from_macros,
+	redundant_semicolons,
+	unconditional_recursion,
+	unreachable_patterns,
+	unused_allocation,
+	unused_braces,
+	unused_comparisons,
+	unused_doc_comments,
+	unused_labels,
+	unused_unsafe,
+	while_true,
+	keyword_idents,
+	missing_docs,
+	non_ascii_idents,
+	noop_method_call,
+	unreachable_pub,
+	single_use_lifetimes,
+	variant_size_differences,
+)]
+#![deny(
+	nonstandard_style,
+	unused_mut,
+)]
+
 //------ Common
 mod common;
 pub use crate::common::Dir as Dir;
 
 //------ Hidden re-exports
-//#[doc(hidden)]
-//pub use inherent::inherent as inherent;
 #[doc(hidden)]
 pub use const_format::assertcp as const_assert;
 #[doc(hidden)]

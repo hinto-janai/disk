@@ -7,16 +7,6 @@ use std::path::{Path,PathBuf};
 //---------------------------------------------------------------------------------------------------- Constants
 pub(crate) const DASH: &str = "--------------------------------------------";
 
-//---------------------------------------------------------------------------------------------------- Non-Empty String
-pub struct NonZeroStr(&'static str);
-
-impl NonZeroStr {
-	pub const fn from_str(string: &'static str) -> Self {
- 		crate::const_assert!(stringify!(string).len() != 0);
-		Self(string)
-	}
-}
-
 //---------------------------------------------------------------------------------------------------- Types of User Dirs
 /// The different types of OS directories, provided by [`directories`](https://docs.rs/directories)
 #[derive(Copy,Clone,Debug,Default,Hash,PartialEq,Eq,PartialOrd,Ord,Serialize,Deserialize)]
@@ -652,11 +642,12 @@ pub(crate) use impl_binary;
 #[macro_export]
 macro_rules! assert_str {
 	($project_directory:tt, $file_name:tt) => {
+		#[allow(clippy::wrong_self_convention)]
 		$crate::const_assert!($project_directory.len() != 0, "disk: 'Project Directory' must not be an empty string!");
+		#[allow(clippy::wrong_self_convention)]
 		$crate::const_assert!($file_name.len() != 0, "disk: 'File Name' must not be an empty string!");
 	}
 }
-pub use assert_str;
 
 // Binary files.
 macro_rules! impl_macro_binary {

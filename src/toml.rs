@@ -20,10 +20,12 @@ pub unsafe trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 
 	// Required functions for generic-ness.
 	#[inline(always)]
+	/// Convert a `struct/enum` to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		Ok(Self::to_string(self)?.into_bytes())
 	}
 	#[inline(always)]
+	/// Create a `struct/enum` from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		common::convert_error(toml_edit::de::from_slice(bytes))
 	}
@@ -35,6 +37,7 @@ pub unsafe trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 		common::convert_error(toml_edit::ser::to_string_pretty(self))
 	}
 	#[inline(always)]
+	/// Create a `struct/enum` from [`String`].
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(toml_edit::de::from_str(string))
 	}
