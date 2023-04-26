@@ -263,6 +263,16 @@
 	unused_mut,
 )]
 
+#[cfg(not(any(target_pointer_width = "64", target_pointer_width = "32")))]
+compile_error!("disk is only compatible with 64-bit/32bit CPUs");
+#[cfg(not(any(
+	target_os = "windows",
+	target_os = "macos",
+	target_os = "linux",
+	target_family = "wasm",
+)))]
+compile_error!("disk is only compatible with Window/macOS/Linux/WASM");
+
 //------ Common
 mod common;
 mod dir;
