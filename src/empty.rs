@@ -46,7 +46,10 @@ crate::common::impl_macro_no_ext!(Empty);
 /// This creates a file called `hello`, containing no data. The `bool` is ignored.
 ///
 /// The `PATH` on Linux would be: `~/.local/share/disk_test/signal/hello`.
-pub trait Empty {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Empty {
 	// Common path methods.
 	common::impl_common!("");
 

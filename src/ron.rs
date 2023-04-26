@@ -14,7 +14,10 @@ crate::common::impl_macro!(Ron, "ron");
 /// ```
 ///
 /// File extension is `.ron`.
-pub trait Ron: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Ron: serde::Serialize + serde::de::DeserializeOwned {
 	// Common functions.
 	common::impl_string!("ron");
 

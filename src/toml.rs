@@ -11,7 +11,10 @@ crate::common::impl_macro!(Toml, "toml");
 /// [`TOML`](https://docs.rs/toml_edit) file format
 ///
 /// File extension is `.toml`.
-pub trait Toml: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_string!("toml");
 

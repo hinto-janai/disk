@@ -12,7 +12,10 @@ crate::common::impl_macro!(MessagePack, "messagepack");
 /// [`MessagePack`](https://docs.rs/rmp-serde) (binary) file format
 ///
 /// File extension is `.messagepack`.
-pub trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("messagepack");
 

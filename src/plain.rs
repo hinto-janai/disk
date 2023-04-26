@@ -12,7 +12,10 @@ crate::common::impl_macro_no_ext!(Plain);
 ///
 /// This is a plain text file with the file extension `.txt`.
 /// Typically used for small and simple data types like integers, strings, and enums.
-pub trait Plain: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_string!("txt");
 

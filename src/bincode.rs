@@ -16,6 +16,7 @@ crate::common::impl_macro_binary!(Bincode, "bin");
 
 /// [`Bincode`](https://docs.rs/bincode) (binary) file format
 ///
+/// ## Encoding
 /// The encoding options used is:
 /// ```rust
 /// # use bincode::Options;
@@ -23,7 +24,10 @@ crate::common::impl_macro_binary!(Bincode, "bin");
 /// ```
 ///
 /// File extension is `.bin`.
-pub trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("bincode");
 

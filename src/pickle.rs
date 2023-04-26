@@ -11,7 +11,10 @@ crate::common::impl_macro!(Pickle, "pickle");
 /// [`Pickle`](https://docs.rs/serde_pickle) (binary) file format
 ///
 /// File extension is `.pickle`.
-pub trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("pickle");
 

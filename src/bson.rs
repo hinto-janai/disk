@@ -11,7 +11,10 @@ crate::common::impl_macro!(Bson, "bson");
 /// [`Bson`](https://docs.rs/bson) (binary) file format
 ///
 /// File extension is `.bson`.
-pub trait Bson: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Bson: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("bson");
 

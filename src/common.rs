@@ -7,6 +7,16 @@ use std::path::{Path,PathBuf};
 //---------------------------------------------------------------------------------------------------- Constants
 pub(crate) const DASH: &str = "--------------------------------------------";
 
+//---------------------------------------------------------------------------------------------------- Non-Empty String
+pub struct NonZeroStr(&'static str);
+
+impl NonZeroStr {
+	pub const fn from_str(string: &'static str) -> Self {
+ 		crate::const_assert!(stringify!(string).len() != 0);
+		Self(string)
+	}
+}
+
 //---------------------------------------------------------------------------------------------------- Types of User Dirs
 /// The different types of OS directories, provided by [`directories`](https://docs.rs/directories)
 #[derive(Copy,Clone,Debug,Default,Hash,PartialEq,Eq,PartialOrd,Ord,Serialize,Deserialize)]
@@ -88,14 +98,6 @@ pub(crate) fn convert_error<T, E: std::fmt::Display + std::fmt::Debug + Send + S
 }
 
 #[inline(always)]
-// Assert PATH isn't empty.
-pub(crate) fn handle_empty_path(path: &str, err: &str) -> Result<(), Error> {
-	if path.is_empty() { bail!("Aborting: Empty PATH for {}", err) }
-
-	Ok(())
-}
-
-#[inline(always)]
 // Assert PATH is safe (absolute).
 pub(crate) fn assert_safe_path(path: &Path) -> Result<(), Error> {
 	if !path.is_absolute() { bail!("Aborting: dangerous PATH detected") }
@@ -139,11 +141,9 @@ macro_rules! impl_io {
 		/// Same as `Self::exists()` but checks if the `gzip` file exists.
 		///
 		/// - `Self::exists()` checks for `file.toml`.
-		/// - `Self::exists_gzip()` checks for`file.toml.gz`.
+		/// - `Self::exists_gzip()` checks for `file.toml.gz`.
 		fn exists_gzip() -> Result<bool, anyhow::Error> {
-			let path = format!("{}.gz", Self::absolute_path()?.display());
-
-			Ok(PathBuf::from(path).exists())
+			Ok(PathBuf::from(Self::absolute_path_gzip()?).exists())
 		}
 
 		#[inline(always)]
@@ -158,7 +158,7 @@ macro_rules! impl_io {
 			Ok(Self::from_bytes(&Self::read_to_bytes_gzip()?)?)
 		}
 
-		/// Try saving a Rust structure as a file.
+		/// Try saving as a file.
 		///
  		/// Calling this will automatically create the directories leading up to the file.
 		fn save(&self) -> Result<(), anyhow::Error> {
@@ -172,7 +172,7 @@ macro_rules! impl_io {
 			Ok(())
 		}
 
-		/// Try saving a Rust structure as a compressed file using `gzip`.
+		/// Try saving as a compressed file using `gzip`.
 		///
 		/// This will suffix the file with `.gz`, for example:
 		/// ```text,ignore
@@ -189,7 +189,7 @@ macro_rules! impl_io {
 			// Create PATH.
 			let mut path = Self::base_path()?;
 			std::fs::create_dir_all(&path)?;
-			path.push(format!("{}.gz", Self::FILE_NAME));
+			path.push(Self::FILE_NAME_GZIP);
 
 			// Compress bytes and write.
 			let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
@@ -201,7 +201,7 @@ macro_rules! impl_io {
 
 		/// **Note: This may not truely be atomic on Windows.**
 		///
-		/// Try saving a Rust structure to a TEMPORARY file first, then renaming it to the associated file.
+		/// Try saving to a TEMPORARY file first, then renaming it to the associated file.
 		///
 		/// This lowers the chance for data corruption on interrupt.
 		///
@@ -222,7 +222,7 @@ macro_rules! impl_io {
 
 			// TMP and normal PATH.
 			let mut tmp = path.clone();
-			tmp.push(format!("{}.tmp", Self::FILE_NAME));
+			tmp.push(Self::FILE_NAME_TMP);
 			path.push(Self::FILE_NAME);
 
 			// Write to TMP.
@@ -252,8 +252,8 @@ macro_rules! impl_io {
 
 			// Create TMP and normal.
 			let mut tmp = path.clone();
-			tmp.push(format!("{}.gz.tmp", Self::FILE_NAME));
-			path.push(format!("{}.gz", Self::FILE_NAME));
+			tmp.push(Self::FILE_NAME_GZIP_TMP);
+			path.push(Self::FILE_NAME_GZIP);
 
 			// Compress bytes.
 			let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
@@ -290,7 +290,7 @@ macro_rules! impl_io {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
-			tmp.push(format!("{}.tmp", Self::FILE_NAME));
+			tmp.push(Self::FILE_NAME_TMP);
 			path.push(Self::FILE_NAME);
 
 			if !path.exists() { return Ok(()) }
@@ -306,8 +306,8 @@ macro_rules! impl_io {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
-			tmp.push(format!("{}.tmp", Self::FILE_NAME));
-			path.push(format!("{}.gz", Self::FILE_NAME));
+			tmp.push(Self::FILE_NAME_TMP);
+			path.push(Self::FILE_NAME_GZIP);
 
 			if !path.exists() { return Ok(()) }
 
@@ -326,8 +326,8 @@ macro_rules! impl_io {
 			let mut tmp = Self::base_path()?;
 			let mut gzip = tmp.clone();
 
-			tmp.push(format!("{}.tmp", Self::FILE_NAME));
-			gzip.push(format!("{}.gz.tmp", Self::FILE_NAME));
+			tmp.push(Self::FILE_NAME_TMP);
+			gzip.push(Self::FILE_NAME_GZIP_TMP);
 
 			if !tmp.exists() && !gzip.exists() { return Ok(()) }
 
@@ -340,7 +340,7 @@ macro_rules! impl_io {
 		/// The absolute PATH of the file associated with this struct WITH the `.gz` extension.
 		fn absolute_path_gzip() -> Result<PathBuf, anyhow::Error> {
 			let mut base = Self::base_path()?;
-			base.push(format!("{}.gz", Self::FILE_NAME));
+			base.push(Self::FILE_NAME_GZIP);
 
 			common::assert_safe_path(&base)?;
 
@@ -360,8 +360,18 @@ macro_rules! impl_common {
 		const PROJECT_DIRECTORY: &'static str;
 		/// Optional sub directories in between the project directory and file.
 		const SUB_DIRECTORIES: &'static str;
-		/// What the filename will be.
+		/// What the raw file name will be (no extension).
+		const FILE: &'static str;
+		/// What the file extension will be.
+		const FILE_EXT: &'static str;
+		/// What the full filename + extension will be.
 		const FILE_NAME: &'static str;
+		/// What the `gzip` variant of the filename will be.
+		const FILE_NAME_GZIP: &'static str;
+		/// What the `tmp` variant of the filename will be.
+		const FILE_NAME_TMP: &'static str;
+		/// What the `gzip` + `tmp` variant of the filename will be.
+		const FILE_NAME_GZIP_TMP: &'static str;
 
 		#[inline]
 		/// Create the directories leading up-to the file.
@@ -387,7 +397,7 @@ macro_rules! impl_common {
 		/// ```ignore
 		/// rm -rf ~/.local/share/myproject
 		/// ```
-		/// The input to all `*_file!` macros are sanity checked.
+		/// The input to all `disk` macros are sanity checked.
 		/// The worst you can do with this function is delete your project's directory.
 		///
 		/// This function calls [`std::fs::remove_dir_all`], which does _not_ follow symlinks.
@@ -395,7 +405,7 @@ macro_rules! impl_common {
 			Ok(std::fs::remove_dir_all(Self::base_path()?)?)
 		}
 
-		/// Try deleting the current file associated with the Rust structure.
+		/// Try deleting the file.
 		///
 		/// This will return success if the file doesn't exist or if deleted.
 		///
@@ -412,9 +422,9 @@ macro_rules! impl_common {
 		#[inline(always)]
 		/// Check if the file exists.
 		///
-		/// `true`  == The file exists.
-		/// `false` == The file does not exist.
-		/// `anyhow::Error` == There was an error, existance is unknown.
+		/// - `true`  == The file exists.
+		/// - `false` == The file does not exist.
+		/// - `anyhow::Error` == There was an error, existance is unknown.
 		fn exists() -> Result<bool, anyhow::Error> {
 			let path = Self::absolute_path()?;
 
@@ -472,12 +482,93 @@ macro_rules! impl_common {
 			Self::FILE_NAME
 		}
 
+		#[inline(always)]
+		/// The extension associated with this struct.
+		///
+		/// You can also access this directly on your type:
+		/// ```rust
+		/// # use serde::{Serialize,Deserialize};
+		/// # use disk::*;
+		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
+		/// #[derive(Serialize, Deserialize)]
+		/// struct Data(u64);
+		///
+		/// assert!(Data::file_ext() == Data::FILE_EXT);
+		/// ```
+		fn file_ext() -> &'static str {
+			Self::FILE_EXT
+		}
+
+		#[inline(always)]
+		/// The file associated with this struct **WITHOUT** the extension.
+		///
+		/// You can also access this directly on your type:
+		/// ```rust
+		/// # use serde::{Serialize,Deserialize};
+		/// # use disk::*;
+		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
+		/// #[derive(Serialize, Deserialize)]
+		/// struct Data(u64);
+		///
+		/// assert!(Data::file() == Data::FILE);
+		/// ```
+		fn file() -> &'static str {
+			Self::FILE
+		}
+
+		#[inline(always)]
+		/// The `gzip` variant of the filename + extension associated with this struct.
+		///
+		/// You can also access this directly on your type:
+		/// ```rust
+		/// # use serde::{Serialize,Deserialize};
+		/// # use disk::*;
+		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
+		/// #[derive(Serialize, Deserialize)]
+		/// struct Data(u64);
+		///
+		/// assert!(Data::file_gzip() == Data::FILE_NAME_GZIP);
+		/// ```
+		fn file_gzip() -> &'static str {
+			Self::FILE_NAME_GZIP
+		}
+
+		#[inline(always)]
+		/// The `tmp` variant of the filename + extension associated with this struct.
+		///
+		/// You can also access this directly on your type:
+		/// ```rust
+		/// # use serde::{Serialize,Deserialize};
+		/// # use disk::*;
+		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
+		/// #[derive(Serialize, Deserialize)]
+		/// struct Data(u64);
+		///
+		/// assert!(Data::file_tmp() == Data::FILE_NAME_TMP);
+		/// ```
+		fn file_tmp() -> &'static str {
+			Self::FILE_NAME_TMP
+		}
+
+		#[inline(always)]
+		/// The `gzip` + `tmp` variant of the filename + extension associated with this struct.
+		///
+		/// You can also access this directly on your type:
+		/// ```rust
+		/// # use serde::{Serialize,Deserialize};
+		/// # use disk::*;
+		/// disk::toml!(Data, disk::Dir::Cache, "MyProject", "", "data");
+		/// #[derive(Serialize, Deserialize)]
+		/// struct Data(u64);
+		///
+		/// assert!(Data::file_gzip_tmp() == Data::FILE_NAME_GZIP_TMP);
+		/// ```
+		fn file_gzip_tmp() -> &'static str {
+			Self::FILE_NAME_GZIP_TMP
+		}
+
 		/// The base path associated with this struct (PATH leading up to the file).
 		fn base_path() -> Result<PathBuf, anyhow::Error> {
-			// PATH safety checks.
-			common::handle_empty_path(Self::PROJECT_DIRECTORY, "Project directory")?;
-			common::handle_empty_path(Self::FILE_NAME, "File name")?;
-
 			// Get a `ProjectDir` from our project name.
 			let mut base = common::get_projectdir(&Self::OS_DIRECTORY, &Self::PROJECT_DIRECTORY)?.to_path_buf();
 
@@ -613,13 +704,19 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt, $header:tt, $version:tt) => {
 					$crate::assert_str!($project_directory, $file_name);
 
-			 		impl $crate::$trait for $data {
-						const OS_DIRECTORY:      $crate::Dir  = $dir;
-						const PROJECT_DIRECTORY: &'static str = $project_directory;
-						const SUB_DIRECTORIES:   &'static str = $sub_directories;
-						const FILE_NAME:         &'static str = $crate::const_format!("{}.{}", $file_name, $file_ext);
-						const HEADER:            [u8; 24]     = $header;
-						const VERSION:           u8           = $version;
+					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
+			 		unsafe impl $crate::$trait for $data {
+						const OS_DIRECTORY:       $crate::Dir  = $dir;
+						const PROJECT_DIRECTORY:  &'static str = $project_directory;
+						const SUB_DIRECTORIES:    &'static str = $sub_directories;
+						const FILE:               &'static str = $file_name;
+						const FILE_EXT:           &'static str = $file_ext;
+						const FILE_NAME:          &'static str = $crate::const_format!("{}.{}", $file_name, $file_ext);
+						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.{}.gzip", $file_name, $file_ext);
+						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.{}.tmp", $file_name, $file_ext);
+						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gzip.tmp", $file_name, $file_ext);
+						const HEADER:             [u8; 24]     = $header;
+						const VERSION:            u8           = $version;
 					}
 				}
 			}
@@ -670,11 +767,17 @@ This example would be located at `~/.local/share/myproject/some/dirs/state`.
 				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
 					$crate::assert_str!($project_directory, $file_name);
 
-			 		impl $crate::$trait for $data {
+					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
+			 		unsafe impl $crate::$trait for $data {
 						const OS_DIRECTORY:      $crate::Dir  = $dir;
-						const PROJECT_DIRECTORY: &'static str = $project_directory;
-						const SUB_DIRECTORIES:   &'static str = $sub_directories;
-						const FILE_NAME:         &'static str = $file_name;
+						const PROJECT_DIRECTORY:  &'static str = $project_directory;
+						const SUB_DIRECTORIES:    &'static str = $sub_directories;
+						const FILE:               &'static str = $file_name;
+						const FILE_EXT:           &'static str = $file_ext;
+						const FILE_NAME:          &'static str = $file_name;
+						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.{}.gzip", $file_name, $file_ext);
+						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.{}.tmp", $file_name, $file_ext);
+						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gzip.tmp", $file_name, $file_ext);
 					}
 				}
 			}
@@ -725,11 +828,17 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
 					$crate::assert_str!($project_directory, $file_name);
 
-			 		impl $crate::$trait for $data {
-						const OS_DIRECTORY:      $crate::Dir  = $dir;
-						const PROJECT_DIRECTORY: &'static str = $project_directory;
-						const SUB_DIRECTORIES:   &'static str = $sub_directories;
-						const FILE_NAME:         &'static str = $crate::const_format!("{}.{}", $file_name, $file_ext);
+					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
+			 		unsafe impl $crate::$trait for $data {
+						const OS_DIRECTORY:       $crate::Dir  = $dir;
+						const PROJECT_DIRECTORY:  &'static str = $project_directory;
+						const SUB_DIRECTORIES:    &'static str = $sub_directories;
+						const FILE:               &'static str = $file_name;
+						const FILE_EXT:           &'static str = $file_ext;
+						const FILE_NAME:          &'static str = $crate::const_format!("{}.{}", $file_name, $file_ext);
+						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.{}.gzip", $file_name, $file_ext);
+						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.{}.tmp", $file_name, $file_ext);
+						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gzip.tmp", $file_name, $file_ext);
 					}
 				}
 			}

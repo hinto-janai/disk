@@ -9,7 +9,10 @@ crate::common::impl_macro!(Yaml, "yml");
 /// [`YAML`](http://docs.rs/serde_yaml) file format
 ///
 /// File extension is `.yml`.
-pub trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_string!("yml");
 

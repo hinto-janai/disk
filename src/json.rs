@@ -9,7 +9,10 @@ crate::common::impl_macro!(Json, "json");
 /// [`JSON`](https://docs.rs/serde_json) file format
 ///
 /// File extension is `.json`.
-pub trait Json: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Json: serde::Serialize + serde::de::DeserializeOwned {
 	// Common functions.
 	common::impl_string!("json");
 

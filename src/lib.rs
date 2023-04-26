@@ -127,25 +127,6 @@
 //! disk::toml!(State, Data, "MyProject", "", "state");
 //! ```
 
-//! ### Manually implementing `disk`
-//! Manually implementing `disk`'s traits is possible as well. It requires 4 constants to be defined.
-//!
-//! The file extension (`.bin`, `.toml`, `.json`, `.bson`, etc) is inferred based on what trait you use.
-//! ```rust
-//! # #[derive(serde::Serialize,serde::Deserialize)]
-//! # struct State;
-//! impl disk::Toml for State {
-//!     // Which OS directory it will be saved in.
-//! 	const OS_DIRECTORY: disk::Dir = disk::Dir::Data;
-//!     // Which the main project directory is called.
-//! 	const PROJECT_DIRECTORY: &'static str = "MyProject";
-//!     // If it should be in any sub-directories.
-//!     const SUB_DIRECTORIES: &'static str = "";
-//!     // What the saved filename will be.
-//! 	const FILE_NAME: &'static str = "state";
-//! }
-//! ```
-
 //------------------------------------------------------------------------------------------------------------------------
 //! ### `bincode` Header and Version
 //! `disk` provides a custom header and versioning feature for the binary format, `bincode`.
@@ -183,6 +164,44 @@
 //! The header and version make up the first `25` bytes of the file, byte `1..=24` being the header and
 //! byte `25` being the version. These bytes are checked upon using any `.from_file()` variant and will
 //! return an error if it does not match your struct's implementation.
+
+//------------------------------------------------------------------------------------------------------------------------
+//! ### Manually implementing `disk`
+//! The macros **verify and sanity check** the input data at compile time,
+//! while manual `unsafe impl` **does not,** and gives you full control over the data definitions,
+//! allowing obvious mistakes like empty `PATH`'s and mismatching filenames to slip through.
+//!
+//! It requires `9` constants to be defined:
+//! ```rust
+//! # #[derive(serde::Serialize,serde::Deserialize)]
+//! # struct State;
+//! unsafe impl disk::Toml for State {
+//!     const OS_DIRECTORY:       disk::Dir    = disk::Dir::Data;
+//!     const PROJECT_DIRECTORY:  &'static str = "MyProject";
+//!     const SUB_DIRECTORIES:    &'static str = "";
+//!     const FILE:               &'static str = "state";
+//!     const FILE_EXT:           &'static str = "toml";
+//!     const FILE_NAME:          &'static str = "state.toml";
+//!     const FILE_NAME_GZIP:     &'static str = "state.gzip";
+//!     const FILE_NAME_TMP:      &'static str = "state.toml.tmp";
+//!     const FILE_NAME_GZIP_TMP: &'static str = "state.toml.gzip.tmp";
+//! }
+//! ```
+//! A **dangerous** example:
+//! ```rust,ignore
+//! # #[derive(serde::Serialize,serde::Deserialize)]
+//! # struct State;
+//! unsafe impl disk::Toml for State {
+//!     const OS_DIRECTORY:       disk::Dir    = disk::Dir::Data;
+//!     const PROJECT_DIRECTORY:  &'static str = "";
+//!     const SUB_DIRECTORIES:    &'static str = "";
+//!     const FILE:               &'static str = "";
+//!     [...]
+//! }
+//!
+//! // This deletes `~/.local/share`...!
+//! State::rm_rf();
+//! ```
 
 //------------------------------------------------------------------------------------------------------------------------
 //! ### File Formats

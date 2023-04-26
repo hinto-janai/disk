@@ -11,7 +11,10 @@ crate::common::impl_macro!(Postcard, "bin");
 /// [`Postcard`](https://docs.rs/postcard) (binary) file format
 ///
 /// File extension is `.bin`.
-pub trait Postcard: serde::Serialize + serde::de::DeserializeOwned {
+///
+/// ## Safety
+/// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
+pub unsafe trait Postcard: serde::Serialize + serde::de::DeserializeOwned {
 	// Common data/functions.
 	common::impl_binary!("postcard");
 
