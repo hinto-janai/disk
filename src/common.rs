@@ -51,6 +51,44 @@ pub(crate) fn assert_safe_path(path: &Path) -> Result<(), Error> {
 	Ok(())
 }
 
+//---------------------------------------------------------------------------------------------------- impl_file_bytes
+// Implements `file_bytes()` for 32/64bit.
+macro_rules! impl_file_bytes {
+	($bit:literal, $unsigned:tt) => {
+		#[inline]
+		#[cfg(target_pointer_width = $bit)]
+		/// Reads a range of bytes of the associated file of [`Self`].
+		///
+		/// ## Errors
+		/// If `start` is greater than `end`, this returns error.
+		fn file_bytes(start: usize, end: usize) -> Result<Vec<u8>, anyhow::Error> {
+			use std::io::Read;
+			use std::io::{Seek,SeekFrom};
+
+			if start > end {
+				bail!("file_bytes(): start > end");
+			}
+
+			let mut buf = {
+				if start == end {
+					Vec::with_capacity(1)
+				} else {
+					Vec::with_capacity(end - start)
+				}
+			};
+
+			let file = std::fs::File::open(Self::absolute_path()?)?;
+			let mut file = std::io::BufReader::new(file);
+
+			file.seek(SeekFrom::Start(start as $unsigned))?;
+			file.read_exact(&mut buf)?;
+
+			Ok(buf)
+		}
+	}
+}
+pub(crate) use impl_file_bytes;
+
 //---------------------------------------------------------------------------------------------------- impl_io
 // Implements I/O methods for all traits.
 macro_rules! impl_io {
@@ -292,6 +330,9 @@ macro_rules! impl_io {
 
 			Ok(base)
 		}
+
+		$crate::common::impl_file_bytes!("64", u64);
+		$crate::common::impl_file_bytes!("32", u32);
 	}
 }
 pub(crate) use impl_io;
@@ -377,10 +418,78 @@ macro_rules! impl_common {
 			Ok(path.exists())
 		}
 
-		/// The base path associated with this struct (PATH leading up to the file).
+		#[inline(always)]
+		/// Returns the file size in bytes.
+		fn file_size() -> Result<u64, anyhow::Error> {
+			let path = Self::absolute_path()?;
+			let file = std::fs::File::open(path)?;
+
+			Ok(file.metadata()?.len())
+		}
+
+		#[inline(always)]
+		/// Returns the file's parent sub-directory size in bytes.
+		///
+		/// This starts from the first [`Self::SUB_DIRECTORIES`],
+		/// and does not include the [`Self::PROJECT_DIRECTORY`].
+		fn sub_dir_size() -> Result<u64, anyhow::Error> {
+			let path = Self::sub_dir_parent_path()?;
+			let dir = std::fs::File::open(path)?;
+
+			Ok(dir.metadata()?.len())
+		}
+
+		#[inline(always)]
+		/// Returns the file's project directory size in bytes ([`Self::PROJECT_DIRECTORY`])
+		fn project_dir_size() -> Result<u64, anyhow::Error> {
+			let path = Self::project_dir_path()?;
+			let file = std::fs::File::open(path)?;
+
+			Ok(file.metadata()?.len())
+		}
+
+		/// Return the full parent project directory associated with this struct.
+		///
+		/// This is the `PATH` leading up to [`Self::PROJECT_DIRECTORY`].
+		fn project_dir_path() -> Result<PathBuf, anyhow::Error> {
+			// Get a `ProjectDir` from our project name.
+			Ok(common::get_projectdir(&Self::OS_DIRECTORY, &Self::PROJECT_DIRECTORY)?.to_path_buf())
+		}
+
+		/// Returns the top-level parent sub-directory associated with this struct.
+		///
+		/// If _only_ returns the top level sub-directory, so if multiple are defined,
+		/// only the first will be returned, e.g: `my/sub/dirs` would return `/.../my`
+		///
+		/// If no sub-directory is defined, this will return the PATH leading up to [`Self::PROJECT_DIRECTORY`].
+		fn sub_dir_parent_path() -> Result<PathBuf, anyhow::Error> {
+			// Get a `ProjectDir` from our project name.
+			let mut base = Self::project_dir_path()?;
+
+			// Append sub directories (if any).
+			if Self::SUB_DIRECTORIES.len() != 0 {
+				#[cfg(target_os = "windows")]
+				if let Some(sub) = Self::SUB_DIRECTORIES.split_terminator(&['/', '\\'][..]).next() {
+					base.push(sub);
+				}
+				#[cfg(target_family = "unix")]
+				if let Some(sub) = Self::SUB_DIRECTORIES.split_terminator('/').next() {
+					base.push(sub);
+				}
+			}
+
+			Ok(base)
+		}
+
+		/// Returns the full base path associated with this struct (PATH leading up to the file).
+		///
+		/// In contrast to [`Self::sub_dir_parent_path`], this returns all sub-directories,
+		/// e.g: `my/sub/dirs` would return `/.../my/sub/dirs`
+		///
+		/// This includes [`Self::PROJECT_DIRECTORY`], [`Self::SUB_DIRECTORIES`] and excludes [`Self::FILE_NAME`].
 		fn base_path() -> Result<PathBuf, anyhow::Error> {
 			// Get a `ProjectDir` from our project name.
-			let mut base = common::get_projectdir(&Self::OS_DIRECTORY, &Self::PROJECT_DIRECTORY)?.to_path_buf();
+			let mut base = Self::project_dir_path()?;
 
 			// Append sub directories (if any).
 			if Self::SUB_DIRECTORIES.len() != 0 {
@@ -394,7 +503,9 @@ macro_rules! impl_common {
 		}
 
 		#[inline(always)]
-		/// The absolute PATH of the file associated with this struct.
+		/// Returns the absolute PATH of the file associated with this struct.
+		///
+		/// This includes [`Self::PROJECT_DIRECTORY`], [`Self::SUB_DIRECTORIES`] and [`Self::FILE_NAME`].
 		fn absolute_path() -> Result<PathBuf, anyhow::Error> {
 			let mut base = Self::base_path()?;
 			base.push(Self::FILE_NAME);

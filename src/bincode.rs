@@ -116,7 +116,7 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	///
 	/// This is useful if your [`Self::HEADER`] should be bytes representing a UTF-8 string.
 	fn file_header_to_string(&self) -> Result<String, anyhow::Error> {
-		let bytes = Self::file_bytes(0..24)?;
+		let bytes = Self::file_bytes(0,24)?;
 
 		Ok(String::from_utf8(bytes)?)
 	}
@@ -141,34 +141,6 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 		} else {
 			bail!("Bincode header failed to match.\nExpected: {:?}\nFound: {:?}", Self::HEADER, &bytes[0..24]);
 		}
-	}
-
-	#[inline]
-	/// Reads a range of bytes of the associated file of [`Self`].
-	fn file_bytes(range: core::ops::Range<u16>) -> Result<Vec<u8>, anyhow::Error> {
-		use std::io::Read;
-		use std::io::{Seek,SeekFrom};
-
-		let (start, end) = (range.start, range.end);
-
-		let len;
-		let seek;
-		if end < start {
-			len = start - end;
-			seek = SeekFrom::End(end.into());
-		} else {
-			len = end - start;
-			seek = SeekFrom::Start(start.into());
-		}
-
-		let mut byte = vec![0; len.into()];
-
-		let mut file = std::fs::File::open(Self::absolute_path()?)?;
-
-		file.seek(seek)?;
-		file.read_exact(&mut byte)?;
-
-		Ok(byte)
 	}
 }
 

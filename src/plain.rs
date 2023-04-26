@@ -45,34 +45,6 @@ pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_plain::from_str(string))
 	}
-
-	#[inline]
-	/// Reads a range of bytes of the associated file of [`Self`].
-	fn file_bytes(range: core::ops::Range<u16>) -> Result<Vec<u8>, anyhow::Error> {
-		use std::io::Read;
-		use std::io::{Seek,SeekFrom};
-
-		let (start, end) = (range.start, range.end);
-
-		let len;
-		let seek;
-		if end < start {
-			len = start - end;
-			seek = SeekFrom::End(end.into());
-		} else {
-			len = end - start;
-			seek = SeekFrom::Start(start.into());
-		}
-
-		let mut byte = vec![0; len.into()];
-
-		let mut file = std::fs::File::open(Self::absolute_path()?)?;
-
-		file.seek(seek)?;
-		file.read_exact(&mut byte)?;
-
-		Ok(byte)
-	}
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS
