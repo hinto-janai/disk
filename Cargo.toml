@@ -26,14 +26,16 @@ all-features = true
 
 [dependencies]
 # Required.
-anyhow      = "1.0.70"
+anyhow       = "1.0.70"
 #disk_derive = { path = "../disk_derive" }
-directories = "5.0.0"
-serde       = { version = "1.0.160", features = ["derive"] }
+directories  = "5.0.0"
+serde        = { version = "1.0.160", features = ["derive"] }
 const_format = { version = "0.2.30", features = ["rust_1_51", "assertcp", "rust_1_64"] }
-flate2 = "1.0.25"
-lazy_static = "1.4.0"
-paste = "1.0.12"
+const-str    = { version = "0.5.4", features = ["case"] }
+flate2       = "1.0.25"
+lazy_static  = "1.4.0"
+seq-macro    = "0.3.3"
+paste        = "1.0.12"
 
 # Optional.
 log          = { version = "0.4.17", optional = true }

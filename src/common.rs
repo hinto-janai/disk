@@ -567,17 +567,176 @@ macro_rules! impl_binary {
 }
 pub(crate) use impl_binary;
 
-//---------------------------------------------------------------------------------------------------- Macro for macro impl.
-// Assert string is not empty.
+//---------------------------------------------------------------------------------------------------- Compile-time assertions, sanity checks.
+// Assert string does not contain invalid path symbol.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! assert_str {
-	($project_directory:tt, $file_name:tt) => {
-		$crate::const_assert!($project_directory.len() != 0, "disk: 'Project Directory' must not be an empty string!");
-		$crate::const_assert!($file_name.len() != 0, "disk: 'File Name' must not be an empty string!");
+macro_rules! assert_str_invalid_symbol {
+	($symbol:literal, $project:tt, $sub:tt, $file:tt) => {
+		$crate::const_assert!(!$crate::contains!($project, $symbol), "disk: 'Project Directory' must not contain '{}'", $symbol);
+		$crate::const_assert!(!$crate::contains!($sub, $symbol), "disk: 'Sub Directories' must not contain '{}'", $symbol);
+		$crate::const_assert!(!$crate::contains!($file, $symbol), "disk: 'File Name' must not contain '{}'", $symbol);
 	}
 }
 
+// INVARIANT: Input should be UPPERCASE.
+// Assert string is not a reserved file name.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! assert_str_reserved {
+	($symbol:literal, $project:tt, $sub:tt, $file:tt) => {
+		$crate::const_assert!(!$crate::convert_case!(upper, $project), $symbol, "disk: 'Project Directory' must not be a reserved filename: '{}'", $symbol);
+		$crate::const_assert!(!$crate::convert_case!(upper, $sub),     $symbol, "disk: 'Sub Directories' must not be a reserved filename: '{}'", $symbol);
+		$crate::const_assert!(!$crate::convert_case!(upper, $file),    $symbol, "disk: 'File Name' must not be a reserved filename: '{}'", $symbol);
+		$crate::seq!(N in 0..10 {
+			const _: () = {
+				if !$crate::contains!($sub, '\\') && $sub.len() > 255 {
+					::std::panic!("disk: the single 'Sub Directory' is a reserved filename");
+				} else if N < $crate::split!($sub, '\\').len() {
+					if $crate::split!($sub, '\\')[N].len() > 255 {
+						::std::panic!("disk: one of the 'Sub Directories' is a reserved filename");
+					}
+				}
+			};
+			const _: () = {
+				if !$crate::contains!($sub, '/') && $sub.len() > 255 {
+					::std::panic!("disk: the single 'Sub Directory' is a reserved filename");
+				} else if N < $crate::split!($sub, '/').len() {
+					if $crate::split!($sub, '/')[N].len() > 255 {
+						::std::panic!("disk: one of the 'Sub Directories' is a reserved filename");
+					}
+				}
+			};
+		});
+	}
+}
+
+// Assert string does not contain invalid path symbol.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! assert_str_invalid_symbol_start_end {
+	($symbol:literal, $project:tt, $sub:tt, $file:tt) => {
+		$crate::const_assert!(!$crate::starts_with!($project, $symbol), "disk: 'Project Directory' must not start with '{}'", $symbol);
+		$crate::const_assert!(!$crate::starts_with!($sub,     $symbol), "disk: 'Sub Directories' must not start with '{}'", $symbol);
+		$crate::const_assert!(!$crate::starts_with!($file,    $symbol), "disk: 'File Name' must not start with '{}'", $symbol);
+		$crate::const_assert!(!$crate::ends_with!($project,   $symbol), "disk: 'Project Directory' must not end with '{}'", $symbol);
+		$crate::const_assert!(!$crate::ends_with!($sub,       $symbol), "disk: 'Sub Directories' must not end with '{}'", $symbol);
+		$crate::const_assert!(!$crate::ends_with!($file,      $symbol), "disk: 'File Name' must not end with '{}'", $symbol);
+		#[cfg(target_os = "windows")]
+		$crate::seq!(N in 0..10 {
+			const _: () = {
+				if N < $crate::split!($sub, '\\').len() {
+					if $crate::starts_with!($crate::split!($sub, '\\')[N], $symbol) {
+						panic!("disk: one of the 'Sub Directories' starts with an invalid symbol");
+					}
+				}
+			};
+		});
+		$crate::seq!(N in 0..10 {
+			const _: () = {
+				if N < $crate::split!($sub, '/').len() {
+					if $crate::starts_with!($crate::split!($sub, '/')[N], $symbol) {
+						panic!("disk: one of the 'Sub Directories' starts with an invalid symbol");
+					}
+				}
+			};
+		});
+		#[cfg(target_os = "windows")]
+		$crate::seq!(N in 0..10 {
+			const _: () = {
+				if N < $crate::split!($sub, '\\').len() {
+					if $crate::ends_with!($crate::split!($sub, '\\')[N], $symbol) {
+						panic!("disk: one of the 'Sub Directories' ends with an invalid symbol");
+					}
+				}
+			};
+		});
+		$crate::seq!(N in 0..10 {
+			const _: () = {
+				if N < $crate::split!($sub, '/').len() {
+					if $crate::ends_with!($crate::split!($sub, '/')[N], $symbol) {
+						panic!("disk: one of the 'Sub Directories' ends with an invalid symbol");
+					}
+				}
+			};
+		});
+	}
+}
+
+// Assert string inputs are valid.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! assert_str {
+	($project:tt, $sub:tt, $file:tt) => {
+		// Non-Zero length check.
+		$crate::const_assert!($project.len() != 0, "disk: 'Project Directory' must not be an empty string");
+		$crate::const_assert!($file.len() != 0, "disk: 'File Name' must not be an empty string!");
+
+		// `Project` + `File` Length overflow check.
+		$crate::const_assert!($project.len() < 255, "disk: 'Project Directory' must be less than 255 bytes long");
+		$crate::const_assert!($file.len() < 255, "disk: 'File Name' must be less than 255 bytes long!");
+
+		// `Project` + `Sub` + `File` length overflow check.
+		$crate::const_assert!($project.len() + $sub.len() + $file.len() < 4000, "disk: Directories combined must be less than 4000 bytes long");
+
+		// `Sub` count overflow check.
+		$crate::const_assert!($crate::split!($sub, '/').len() < 10, "disk: 'Sub Directories' are limited to 10-depth");
+
+		// Individual `Sub` length overflow check.
+		#[cfg(target_os = "windows")]
+		$crate::seq!(N in 0..10 {
+			const _: () = {
+				if !$crate::contains!($sub, '\\') && $sub.len() > 255 {
+					::std::panic!("disk: the single 'Sub Directory' is longer than 255 bytes");
+				} else if N < $crate::split!($sub, '\\').len() {
+					if $crate::split!($sub, '\\')[N].len() > 255 {
+						::std::panic!("disk: one of the 'Sub Directories' is longer than 255 bytes");
+					}
+				}
+			};
+		});
+		$crate::seq!(N in 0..10 {
+			const _: () = {
+				if !$crate::contains!($sub, '/') && $sub.len() > 255 {
+					::std::panic!("disk: the single 'Sub Directory' is longer than 255 bytes");
+				} else if N < $crate::split!($sub, '/').len() {
+					if $crate::split!($sub, '/')[N].len() > 255 {
+						::std::panic!("disk: one of the 'Sub Directories' is longer than 255 bytes");
+					}
+				}
+			};
+		});
+
+		// Reserved file name check (windows-only).
+//		$crate::assert_str_reserved!("CON",  $project, $sub, $file);
+
+		// Weird symbol checks.
+		$crate::const_assert!(!$crate::contains!($project, "/"), "disk: 'Project Directory' must not contain '/'");
+		$crate::const_assert!(!$crate::contains!($project, "\\"), "disk: 'Project Directory' must not contain '\\'");
+		$crate::const_assert!(!$crate::contains!($file, "/"), "disk: 'File Name' must not contain '/'");
+		$crate::const_assert!(!$crate::contains!($file, "\\"), "disk: 'File Name' must not contain '\\'");
+		$crate::assert_str_invalid_symbol!("<",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!(">",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!(":",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("\"", $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("\'", $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("|",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("?",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("*",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("^",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("$",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("&",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!("(",  $project, $sub, $file);
+		$crate::assert_str_invalid_symbol!(")",  $project, $sub, $file);
+
+		// Assert PATHs do not start/end with invalid symbol.
+		$crate::assert_str_invalid_symbol_start_end!(" ", $project, $sub, $file);
+		$crate::assert_str_invalid_symbol_start_end!("/", $project, $sub, $file);
+		$crate::assert_str_invalid_symbol_start_end!("\\", $project, $sub, $file);
+	}
+}
+
+//---------------------------------------------------------------------------------------------------- Macros for impl macro.
 // Binary files.
 macro_rules! impl_macro_binary {
 	($trait:ident, $file_ext:literal) => {
@@ -622,7 +781,7 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 			#[macro_export]
 			macro_rules! [<$trait:lower>] {
 				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt, $header:tt, $version:tt) => {
-					$crate::assert_str!($project_directory, $file_name);
+					$crate::assert_str!($project_directory, $sub_directories, $file_name);
 
 					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
 			 		unsafe impl $crate::$trait for $data {
@@ -685,7 +844,7 @@ This example would be located at `~/.local/share/myproject/some/dirs/state`.
 			#[macro_export]
 			macro_rules! [<$trait:lower>] {
 				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-					$crate::assert_str!($project_directory, $file_name);
+					$crate::assert_str!($project_directory, $sub_directories, $file_name);
 
 					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
 			 		unsafe impl $crate::$trait for $data {
@@ -746,7 +905,7 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 			#[macro_export]
 			macro_rules! [<$trait:lower>] {
 				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
-					$crate::assert_str!($project_directory, $file_name);
+					$crate::assert_str!($project_directory, $sub_directories, $file_name);
 
 					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
 			 		unsafe impl $crate::$trait for $data {

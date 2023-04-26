@@ -273,6 +273,12 @@ pub use crate::dir::Dir;
 pub use const_format::assertcp as const_assert;
 #[doc(hidden)]
 pub use const_format::formatcp as const_format;
+#[doc(hidden)]
+pub use const_str::*;
+#[doc(hidden)]
+pub use seq_macro::*;
+#[doc(hidden)]
+pub use paste::*;
 
 //------ File formats
 #[cfg(feature = "bincode")]
