@@ -773,11 +773,11 @@ This example would be located at `~/.local/share/myproject/some/dirs/state`.
 						const PROJECT_DIRECTORY:  &'static str = $project_directory;
 						const SUB_DIRECTORIES:    &'static str = $sub_directories;
 						const FILE:               &'static str = $file_name;
-						const FILE_EXT:           &'static str = $file_ext;
+						const FILE_EXT:           &'static str = "";
 						const FILE_NAME:          &'static str = $file_name;
-						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.{}.gzip", $file_name, $file_ext);
-						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.{}.tmp", $file_name, $file_ext);
-						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gzip.tmp", $file_name, $file_ext);
+						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.gzip", $file_name);
+						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.tmp", $file_name);
+						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.gzip.tmp", $file_name);
 					}
 				}
 			}
