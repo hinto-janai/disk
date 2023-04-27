@@ -6,7 +6,7 @@ use crate::common;
 //use serde::{Serialize,Deserialize};
 
 //---------------------------------------------------------------------------------------------------- Toml
-crate::common::impl_macro_no_ext!(Plain);
+crate::common::impl_macro!(Plain, "txt");
 
 /// [`Plain`](https://docs.rs/serde_plain) text file format
 ///
@@ -38,7 +38,8 @@ pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 	///
 	/// This uses [`toml_edit::ser::to_string_pretty`];
 	fn to_string(&self) -> Result<String, anyhow::Error> {
-		common::convert_error(serde_plain::to_string(self))
+		// Newline must be appended.
+		Ok(format!("{}\n", serde_plain::to_string(self)?))
 	}
 	#[inline(always)]
 	/// Create a `struct/enum` from a [`String`].
