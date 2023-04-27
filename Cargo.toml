@@ -23,6 +23,7 @@ full        = ["toml", "json", "yaml", "log", "bincode", "pickle", "messagepack"
 
 [package.metadata.docs.rs]
 all-features = true
+rustc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 # Required.

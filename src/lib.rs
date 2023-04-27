@@ -263,6 +263,8 @@
 	unused_mut,
 )]
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
 #[cfg(not(any(target_pointer_width = "64", target_pointer_width = "32")))]
 compile_error!("disk is only compatible with 64-bit/32bit CPUs");
 #[cfg(not(any(
@@ -272,6 +274,7 @@ compile_error!("disk is only compatible with 64-bit/32bit CPUs");
 	target_family = "wasm",
 )))]
 compile_error!("disk is only compatible with Window/macOS/Linux/WASM");
+
 
 //------ Common
 mod common;
