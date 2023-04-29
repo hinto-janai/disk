@@ -169,6 +169,30 @@
 //! return an error if it does not match your struct's implementation.
 
 //------------------------------------------------------------------------------------------------------------------------
+//! ### `bincode2`
+//! `disk` provides two `bincode` traits, [`Bincode`] & [`Bincode2`].
+//! - [`Bincode`] and [`bincode!`] == `bincode 1.x.x`
+//! - [`Bincode2`] and [`bincode2!`] == `bincode 2.x.x`
+//!
+//! [`bincode 2.0.0`](https://docs.rs/bincode/2.0.0-rc.3) (currently not stable) brings big performance improvements.
+//!
+//! It also no longer requires `serde`, having it's own `Encode` and `Decode` traits.
+//!
+//! This means your type must implement these as well, e.g:
+//! ```rust
+//! use bincode::{Encode, Decode};
+//!
+//! #[derive(Encode, Decode)]
+//! struct State;
+//! ```
+//!
+//! To implement `bincode 2.x.x`'s new traits, add it to `Cargo.toml`:
+//! ```txt
+//! bincode = "2.0.0-rc.3"
+//! ```
+//! and add `#[derive(Encode, Decode)]` to your types, like you would with `serde`.
+
+//------------------------------------------------------------------------------------------------------------------------
 //! ### Manually implementing `disk`
 //! The macros **verify and sanity check** the input data at compile time,
 //! while manual `unsafe impl` **does not,** and gives you full control over the data definitions,
@@ -215,6 +239,7 @@
 //! | File Format | Feature flag to enable |
 //! |-------------|------------------------|
 //! | Bincode     | `bincode`
+//! | Bincode2    | `bincode2`
 //! | Postcard    | `postcard`
 //! | JSON        | `json`
 //! | TOML        | `toml`
@@ -298,6 +323,11 @@ pub use paste::*;
 mod bincode;
 #[cfg(feature = "bincode")]
 pub use crate::bincode::Bincode;
+
+#[cfg(feature = "bincode2")]
+mod bincode2;
+#[cfg(feature = "bincode2")]
+pub use crate::bincode2::Bincode2;
 
 #[cfg(feature = "postcard")]
 mod postcard;
