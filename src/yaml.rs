@@ -13,9 +13,6 @@ crate::common::impl_macro!(Yaml, "yml");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
-	// Common data/functions.
-	common::impl_string!("yml");
-
 	// Required functions for generic-ness.
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.
@@ -43,6 +40,9 @@ pub unsafe trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_yaml::from_str(string))
 	}
+
+	// Common data/functions.
+	common::impl_string!("yml");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

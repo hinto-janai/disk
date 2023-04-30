@@ -5,7 +5,7 @@
 //! - (De)serializing various file formats (provided by `serde`)
 //! - To/from disk locations that follow OS specifications (provided by `directories`)
 //!
-//! All errors returned will be an [`anyhow::Error`].
+//! All errors returned will be an [`Error`] (re-exported `anyhow::Error`).
 
 //------------------------------------------------------------------------------------------------------------------------
 //! # Implementing `disk`
@@ -304,7 +304,9 @@ compile_error!("disk is only compatible with Window/macOS/Linux/WASM");
 //------ Common
 mod common;
 mod dir;
+mod header;
 pub use crate::dir::Dir;
+pub use anyhow::Error;
 
 //------ Hidden re-exports
 #[doc(hidden)]

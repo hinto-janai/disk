@@ -15,9 +15,6 @@ crate::common::impl_macro!(Toml, "toml");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Toml: serde::Serialize + serde::de::DeserializeOwned {
-	// Common data/functions.
-	common::impl_string!("toml");
-
 	// Required functions for generic-ness.
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.
@@ -43,6 +40,9 @@ pub unsafe trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(toml_edit::de::from_str(string))
 	}
+
+	// Common data/functions.
+	common::impl_string!("toml");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

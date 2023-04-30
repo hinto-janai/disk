@@ -50,9 +50,6 @@ crate::common::impl_macro_no_ext!(Empty);
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Empty {
-	// Common path methods.
-	common::impl_common!("");
-
 	/// Try creating an empty file associated with this struct.
 	///
 	/// Calling this will automatically create the directories leading up to the file.
@@ -66,6 +63,9 @@ pub unsafe trait Empty {
 		std::fs::File::create(path)?;
 		Ok(())
 	}
+
+	// Common path methods.
+	common::impl_common!("");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

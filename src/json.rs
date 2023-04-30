@@ -13,9 +13,6 @@ crate::common::impl_macro!(Json, "json");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Json: serde::Serialize + serde::de::DeserializeOwned {
-	// Common functions.
-	common::impl_string!("json");
-
 	// Required functions for generic-ness.
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.
@@ -41,6 +38,9 @@ pub unsafe trait Json: serde::Serialize + serde::de::DeserializeOwned {
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_json::de::from_str(string))
 	}
+
+	// Common functions.
+	common::impl_string!("json");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

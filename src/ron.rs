@@ -18,9 +18,6 @@ crate::common::impl_macro!(Ron, "ron");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Ron: serde::Serialize + serde::de::DeserializeOwned {
-	// Common functions.
-	common::impl_string!("ron");
-
 	// Required functions for generic-ness.
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.
@@ -50,6 +47,9 @@ pub unsafe trait Ron: serde::Serialize + serde::de::DeserializeOwned {
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(ron::de::from_str(string))
 	}
+
+	// Common functions.
+	common::impl_string!("ron");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

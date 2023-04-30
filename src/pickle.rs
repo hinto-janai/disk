@@ -15,9 +15,6 @@ crate::common::impl_macro!(Pickle, "pickle");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
-	// Common data/functions.
-	common::impl_binary!("pickle");
-
 	#[inline(always)]
 	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
@@ -29,6 +26,9 @@ pub unsafe trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		common::convert_error(serde_pickle::ser::to_vec(self, serde_pickle::ser::SerOptions::new()))
 	}
+
+	// Common data/functions.
+	common::impl_binary!("pickle");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

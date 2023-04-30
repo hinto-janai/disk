@@ -769,9 +769,6 @@ pub(crate) use impl_common;
 // This automatically implements [impl_common!()].
 macro_rules! impl_string {
 	($file_ext:literal) => {
-		common::impl_common!($file_ext);
-		common::impl_io!($file_ext);
-
 		#[inline(always)]
 		/// Turn [`Self`] into a [`String`], maintaining formatting if possible.
 		fn into_writeable_fmt(&self) -> Result<String, anyhow::Error> {
@@ -783,6 +780,9 @@ macro_rules! impl_string {
 		fn read_to_string() -> Result<String, anyhow::Error> {
 			Ok(std::fs::read_to_string(Self::absolute_path()?)?)
 		}
+
+		common::impl_io!($file_ext);
+		common::impl_common!($file_ext);
 	};
 }
 pub(crate) use impl_string;
@@ -792,14 +792,14 @@ pub(crate) use impl_string;
 // This automatically implements `impl_common!()`.
 macro_rules! impl_binary {
 	($file_ext:literal) => {
-		crate::common::impl_common!($file_ext);
-		crate::common::impl_io!($file_ext);
-
 		#[inline(always)]
 		/// Turn [`Self`] into bytes that can be written to disk.
 		fn into_writeable_fmt(&self) -> Result<Vec<u8>, anyhow::Error> {
 			self.to_bytes()
 		}
+
+		crate::common::impl_io!($file_ext);
+		crate::common::impl_common!($file_ext);
 	};
 }
 pub(crate) use impl_binary;

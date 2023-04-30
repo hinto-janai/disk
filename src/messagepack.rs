@@ -16,9 +16,6 @@ crate::common::impl_macro!(MessagePack, "messagepack");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
-	// Common data/functions.
-	common::impl_binary!("messagepack");
-
 	#[inline(always)]
 	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
@@ -30,6 +27,9 @@ pub unsafe trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		common::convert_error(rmp_serde::encode::to_vec(self))
 	}
+
+	// Common data/functions.
+	common::impl_binary!("messagepack");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

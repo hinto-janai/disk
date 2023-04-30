@@ -15,9 +15,6 @@ crate::common::impl_macro!(Postcard, "bin");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Postcard: serde::Serialize + serde::de::DeserializeOwned {
-	// Common data/functions.
-	common::impl_binary!("postcard");
-
 	#[inline(always)]
 	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
@@ -30,6 +27,9 @@ pub unsafe trait Postcard: serde::Serialize + serde::de::DeserializeOwned {
 		let vec = common::convert_error(postcard::to_stdvec(self))?;
 		Ok(vec)
 	}
+
+	// Common data/functions.
+	common::impl_binary!("postcard");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS
