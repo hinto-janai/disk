@@ -5,9 +5,6 @@ use serde::{Serialize,Deserialize};
 use std::path::{Path,PathBuf};
 use crate::Dir;
 
-//---------------------------------------------------------------------------------------------------- Constants
-pub(crate) const DASH: &str = "--------------------------------------------";
-
 //---------------------------------------------------------------------------------------------------- Common Functions.
 #[inline(always)]
 // Create the `ProjectDirs` struct from a project name.
@@ -49,6 +46,35 @@ pub(crate) fn assert_safe_path(path: &Path) -> Result<(), Error> {
 	if !path.is_absolute() { bail!("Aborting: dangerous PATH detected") }
 
 	Ok(())
+}
+
+#[inline(always)]
+pub(crate) fn decompress(bytes: &[u8]) -> Result<Vec<u8>, Error> {
+	use std::io::prelude::*;
+	use flate2::read::GzDecoder;
+
+	// Buffer to store decompressed bytes.
+	let mut buf = Vec::new();
+
+	// Decode compressed file bytes into buffer.
+	GzDecoder::new(bytes).read_to_end(&mut buf)?;
+
+	Ok(buf)
+}
+
+#[inline(always)]
+// Returns length of compressed bytes.
+pub(crate) fn compress(bytes: &[u8]) -> Result<Vec<u8>, Error> {
+	use std::io::prelude::*;
+	use flate2::Compression;
+	use flate2::write::GzEncoder;
+
+	// Compress bytes and write.
+	let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
+	encoder.write_all(bytes)?;
+	let vec = encoder.finish()?;
+
+	Ok(vec)
 }
 
 //---------------------------------------------------------------------------------------------------- impl_file_bytes
@@ -107,27 +133,21 @@ macro_rules! impl_io {
 		/// config.json.gz // What `.read_to_bytes_gzip()` will look for
 		/// ```
 		fn read_to_bytes_gzip() -> Result<Vec<u8>, anyhow::Error> {
-			use std::io::prelude::*;
-			use flate2::read::GzDecoder;
-
-			// Buffer to store decompressed bytes.
-			let mut buf = Vec::new();
-
-			// Decode compressed file bytes into buffer.
-			GzDecoder::new(
-				&std::fs::read(Self::absolute_path_gzip()?)?[..]
-			).read_to_end(&mut buf)?;
+			// Decode compressed file bytes.
+			let buf = common::decompress(
+				&std::fs::read(Self::absolute_path_gzip()?)?
+			)?;
 
 			Ok(buf)
 		}
 
 		#[inline(always)]
-		/// Same as `Self::exists()` but checks if the `gzip` file exists.
+		/// Same as [`Self::exists()`] but checks if the `gzip` file exists.
 		///
-		/// - `Self::exists()` checks for `file.toml`.
-		/// - `Self::exists_gzip()` checks for `file.toml.gz`.
+		/// - [`Self::exists()`] checks for `file.toml`.
+		/// - [`Self::exists_gzip()`] checks for `file.toml.gz`.
 		fn exists_gzip() -> Result<bool, anyhow::Error> {
-			Ok(PathBuf::from(Self::absolute_path_gzip()?).exists())
+			Ok(Self::absolute_path_gzip()?.exists())
 		}
 
 		#[inline(always)]
@@ -143,36 +163,95 @@ macro_rules! impl_io {
 		}
 
 		#[inline(always)]
-		/// Read the file using [`memmap2`](https://docs.rs/memmap2) and deserialize into [`Self`].
+		/// Same as [`Self::from_file`] but with [`memmap2`](https://docs.rs/memmap2).
 		///
 		/// ## Safety
-		/// Using this function can be much faster than [`Self::from_file`] but
-		/// you _must_ understand this all the invariants that `memmap` comes with.
-		///
-		/// When these invariants are broken, _Undefined Behavior_ (UB) will occur.
+		/// You _must_ understand all the invariants that `memmap` comes with.
 		///
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
 		unsafe fn from_file_memmap() -> Result<Self, anyhow::Error> {
 			let file = std::fs::File::open(Self::absolute_path()?)?;
 			let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
+			drop(file);
 			Ok(Self::from_bytes(&*mmap)?)
+		}
+
+		#[inline(always)]
+		/// Same as [`Self::from_file_gzip`] but with [`memmap2`](https://docs.rs/memmap2).
+		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn from_file_gzip_memmap() -> Result<Self, anyhow::Error> {
+			let file = std::fs::File::open(Self::absolute_path_gzip()?)?;
+			let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
+			drop(file);
+			Ok(Self::from_bytes(&common::decompress(&*mmap)?)?)
 		}
 
 		/// Try saving as a file.
 		///
+		/// This will return the amount of `bytes` saved on success.
+		///
  		/// Calling this will automatically create the directories leading up to the file.
-		fn save(&self) -> Result<(), anyhow::Error> {
+		fn save(&self) -> Result<usize, anyhow::Error> {
+			let bytes = self.into_writeable_fmt()?;
+
 			// Create PATH.
 			let mut path = Self::base_path()?;
 			std::fs::create_dir_all(&path)?;
 			path.push(Self::FILE_NAME);
 
 			// Write.
-			std::fs::write(path, self.into_writable_fmt()?)?;
-			Ok(())
+			std::fs::write(path, &bytes)?;
+			Ok(bytes.len())
+		}
+
+
+		/// Same as [`Self::save`] but with [`memmap2`](https://docs.rs/memmap2).
+		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn save_memmap(&self) -> Result<usize, anyhow::Error> {
+			// Create bytes.
+			let bytes = self.to_bytes()?;
+			let len = bytes.len();
+
+			// Create PATH.
+			let mut path = Self::base_path()?;
+			std::fs::create_dir_all(&path)?;
+			path.push(Self::FILE_NAME);
+
+			// Open file.
+			let file = std::fs::OpenOptions::new()
+				.read(true)
+				.write(true)
+				.create(true)
+				.open(path)?;
+
+			// Resize file length.
+			#[cfg(target_pointer_width = "64")]
+			file.set_len(len as u64)?;
+			#[cfg(not(target_pointer_width = "64"))]
+			file.set_len(len.try_into()?)?;
+
+			// Write and flush.
+			let mut mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
+			drop(file);
+			mmap.copy_from_slice(&bytes);
+			mmap.flush()?;
+
+			Ok(len)
 		}
 
 		/// Try saving as a compressed file using `gzip`.
+		///
+		/// This will return a tuple of:
+		/// - The amount of `bytes` before compression
+		/// - The amount of compressed `bytes` actually saved
 		///
 		/// This will suffix the file with `.gz`, for example:
 		/// ```text,ignore
@@ -181,26 +260,63 @@ macro_rules! impl_io {
 		/// ```
 		///
 		/// Calling this will automatically create the directories leading up to the file.
-		fn save_gzip(&self) -> Result<(), anyhow::Error> {
-			use std::io::prelude::*;
-			use flate2::Compression;
-			use flate2::write::GzEncoder;
+		fn save_gzip(&self) -> Result<(usize, usize), anyhow::Error> {
+			// Compress bytes and write.
+			let bytes = self.to_bytes()?;
+			let len = bytes.len();
+			let c = common::compress(&bytes)?;
+			let c_len = c.len();
 
 			// Create PATH.
 			let mut path = Self::base_path()?;
 			std::fs::create_dir_all(&path)?;
 			path.push(Self::FILE_NAME_GZIP);
 
-			// Compress bytes and write.
-			let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
-			encoder.write_all(&self.to_bytes()?[..])?;
-			std::fs::write(path, encoder.finish()?)?;
+			std::fs::write(path, c)?;
 
-			Ok(())
+			Ok((len, c_len))
 		}
 
-		/// **Note: This may not truely be atomic on Windows.**
+		/// Same as [`Self::save_gzip`] but with [`memmap2`](https://docs.rs/memmap2).
 		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn save_gzip_memmap(&self) -> Result<(usize, usize), anyhow::Error> {
+			// Compress bytes and write.
+			let bytes = self.to_bytes()?;
+			let len = bytes.len();
+			let c = common::compress(&bytes)?;
+			let c_len = c.len();
+
+			// Create PATH.
+			let mut path = Self::base_path()?;
+			std::fs::create_dir_all(&path)?;
+			path.push(Self::FILE_NAME_GZIP);
+
+			// Open file.
+			let file = std::fs::OpenOptions::new()
+				.read(true)
+				.write(true)
+				.create(true)
+				.open(path)?;
+
+			// Resize file length.
+			#[cfg(target_pointer_width = "64")]
+			file.set_len(c_len as u64)?;
+			#[cfg(not(target_pointer_width = "64"))]
+			file.set_len(c_len.try_into()?)?;
+
+			// Write and flush.
+			let mut mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
+			drop(file);
+			mmap.copy_from_slice(&c);
+			mmap.flush()?;
+
+			Ok((len, c_len))
+		}
+
 		/// Try saving to a TEMPORARY file first, then renaming it to the associated file.
 		///
 		/// This lowers the chance for data corruption on interrupt.
@@ -214,8 +330,12 @@ macro_rules! impl_io {
 		/// ```
 		/// Already existing `.tmp` files will be overwritten.
 		///
+		/// This will return the amount of `bytes` saved on success.
+		///
 		/// Calling this will automatically create the directories leading up to the file.
-		fn save_atomic(&self) -> Result<(), anyhow::Error> {
+		fn save_atomic(&self) -> Result<usize, anyhow::Error> {
+			let bytes = self.into_writeable_fmt()?;
+
 			// Create PATH.
 			let mut path = Self::base_path()?;
 			std::fs::create_dir_all(&path)?;
@@ -226,7 +346,7 @@ macro_rules! impl_io {
 			path.push(Self::FILE_NAME);
 
 			// Write to TMP.
-			if let Err(e) = std::fs::write(&tmp, self.into_writable_fmt()?) {
+			if let Err(e) = std::fs::write(&tmp, &bytes) {
 				std::fs::remove_file(&tmp)?;
 				bail!(e);
 			}
@@ -237,14 +357,16 @@ macro_rules! impl_io {
 				bail!(e);
 			}
 
-			Ok(())
+			Ok(bytes.len())
 		}
 
 		/// Combines [`Self::save_gzip()`] and [`Self::save_atomic()`].
-		fn save_atomic_gzip(&self) -> Result<(), anyhow::Error> {
-			use std::io::prelude::*;
-			use flate2::Compression;
-			use flate2::write::GzEncoder;
+		fn save_atomic_gzip(&self) -> Result<(usize, usize), anyhow::Error> {
+			// Compress bytes.
+			let bytes = self.to_bytes()?;
+			let len = bytes.len();
+			let c = common::compress(&bytes)?;
+			let c_len = c.len();
 
 			// Create PATH.
 			let mut path = Self::base_path()?;
@@ -255,12 +377,8 @@ macro_rules! impl_io {
 			tmp.push(Self::FILE_NAME_GZIP_TMP);
 			path.push(Self::FILE_NAME_GZIP);
 
-			// Compress bytes.
-			let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
-			encoder.write_all(&self.to_bytes()?[..])?;
-
 			// Write to TMP.
-			if let Err(e) = std::fs::write(&tmp, &encoder.finish()?) {
+			if let Err(e) = std::fs::write(&tmp, &c) {
 				std::fs::remove_file(&tmp)?;
 				bail!(e);
 			}
@@ -271,11 +389,119 @@ macro_rules! impl_io {
 				bail!(e);
 			}
 
-			Ok(())
+			Ok((len, c_len))
 		}
 
-		/// **Note: This may not truely be atomic on Windows.**
+		/// Same as [`Self::save_atomic()`] but with [`memmap2`](https://docs.rs/memmap2).
 		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn save_atomic_memmap(&self) -> Result<usize, anyhow::Error> {
+			// Create bytes
+			let bytes = self.to_bytes()?;
+			let len = bytes.len();
+
+			// Create PATH.
+			let mut path = Self::base_path()?;
+			std::fs::create_dir_all(&path)?;
+
+			// TMP and normal PATH.
+			let mut tmp = path.clone();
+			tmp.push(Self::FILE_NAME_TMP);
+			path.push(Self::FILE_NAME);
+
+			// Open file.
+			let file = std::fs::OpenOptions::new()
+				.read(true)
+				.write(true)
+				.create(true)
+				.open(&tmp)?;
+
+			// Resize file length.
+			#[cfg(target_pointer_width = "64")]
+			file.set_len(len as u64)?;
+			#[cfg(not(target_pointer_width = "64"))]
+			file.set_len(len.try_into()?)?;
+
+			// Write to TMP.
+			let mut mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
+			drop(file);
+			mmap.copy_from_slice(&bytes);
+
+			if let Err(e) = mmap.flush() {
+				std::fs::remove_file(&tmp)?;
+				bail!(e);
+			}
+
+			drop(mmap);
+
+			// Rename TMP to normal.
+			if let Err(e) = std::fs::rename(&tmp, &path) {
+				std::fs::remove_file(&tmp)?;
+				bail!(e);
+			}
+
+			Ok(len)
+		}
+
+		/// Same as [`Self::save_atomic_gzip()`] but with [`memmap2`](https://docs.rs/memmap2).
+		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn save_atomic_gzip_memmap(&self) -> Result<(usize, usize), anyhow::Error> {
+			// Compress bytes.
+			let bytes = self.to_bytes()?;
+			let len = bytes.len();
+			let c = common::compress(&bytes)?;
+			let c_len = c.len();
+
+			// Create PATH.
+			let mut path = Self::base_path()?;
+			std::fs::create_dir_all(&path)?;
+
+			// TMP and normal PATH.
+			let mut tmp = path.clone();
+			tmp.push(Self::FILE_NAME_TMP);
+			path.push(Self::FILE_NAME);
+
+			// Open file.
+			let file = std::fs::OpenOptions::new()
+				.read(true)
+				.write(true)
+				.create(true)
+				.open(&tmp)?;
+
+			// Resize file length.
+			#[cfg(target_pointer_width = "64")]
+			file.set_len(c_len as u64)?;
+			#[cfg(not(target_pointer_width = "64"))]
+			file.set_len(c_len.try_into()?)?;
+
+			// Write to TMP.
+			let mut mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
+			drop(file);
+			mmap.copy_from_slice(&bytes);
+
+			if let Err(e) = mmap.flush() {
+				std::fs::remove_file(&tmp)?;
+				bail!(e);
+			}
+
+			drop(mmap);
+
+			// Rename TMP to normal.
+			if let Err(e) = std::fs::rename(&tmp, &path) {
+				std::fs::remove_file(&tmp)?;
+				bail!(e);
+			}
+
+			Ok((len, c_len))
+		}
+
 		/// Rename the associated file before attempting to delete it.
 		///
 		/// This lowers the chance for data corruption on interrupt.
@@ -379,10 +605,14 @@ macro_rules! impl_common {
 		#[inline]
 		/// Create the directories leading up-to the file.
 		///
+		/// Returns the [`PathBuf`] created on success.
+		///
 		/// This is not necessary when using any variant of
 		/// `Self::save()` as the directories are created implicitly.
-		fn mkdir() -> Result<(), anyhow::Error> {
-			Ok(std::fs::create_dir_all(Self::base_path()?)?)
+		fn mkdir() -> Result<PathBuf, anyhow::Error> {
+			let path = Self::base_path()?;
+			std::fs::create_dir_all(&path)?;
+			Ok(path)
 		}
 
 		#[inline]
@@ -544,7 +774,7 @@ macro_rules! impl_string {
 
 		#[inline(always)]
 		/// Turn [`Self`] into a [`String`], maintaining formatting if possible.
-		fn into_writable_fmt(&self) -> Result<String, anyhow::Error> {
+		fn into_writeable_fmt(&self) -> Result<String, anyhow::Error> {
 			self.to_string()
 		}
 
@@ -552,15 +782,6 @@ macro_rules! impl_string {
 		/// Read the file directly as a [`String`].
 		fn read_to_string() -> Result<String, anyhow::Error> {
 			Ok(std::fs::read_to_string(Self::absolute_path()?)?)
-		}
-
-		#[inline(always)]
-		#[cfg(feature = "log")]
-		/// Print the file's contents to console surrounded by dashes with the [`log`] crate.
-		fn info_dash(string: &str) {
-			log::info!("{}", common::DASH);
-			string.lines().for_each(|i| log::info!("{}", i));
-			log::info!("{}", common::DASH);
 		}
 	};
 }
@@ -576,7 +797,7 @@ macro_rules! impl_binary {
 
 		#[inline(always)]
 		/// Turn [`Self`] into bytes that can be written to disk.
-		fn into_writable_fmt(&self) -> Result<Vec<u8>, anyhow::Error> {
+		fn into_writeable_fmt(&self) -> Result<Vec<u8>, anyhow::Error> {
 			self.to_bytes()
 		}
 	};

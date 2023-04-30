@@ -19,13 +19,13 @@ pub unsafe trait Postcard: serde::Serialize + serde::de::DeserializeOwned {
 	common::impl_binary!("postcard");
 
 	#[inline(always)]
-	/// Create a `struct/enum` from bytes.
+	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		common::convert_error(postcard::from_bytes(&bytes))
 	}
 
 	#[inline(always)]
-	/// Convert a `struct/enum` to bytes.
+	/// Convert [`Self`] to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		let vec = common::convert_error(postcard::to_stdvec(self))?;
 		Ok(vec)

@@ -21,12 +21,12 @@ pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 
 	// Required functions for generic-ness.
 	#[inline(always)]
-	/// Convert a `struct/enum` to bytes.
+	/// Convert [`Self`] to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		Ok(Self::to_string(self)?.into_bytes())
 	}
 	#[inline(always)]
-	/// Create a `struct/enum` from bytes.
+	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		let string = std::str::from_utf8(bytes)?;
 		common::convert_error(serde_plain::from_str(string))
@@ -34,7 +34,7 @@ pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 
 	// Plain text operations.
 	#[inline(always)]
-	/// Convert a `struct/enum` to a [`String`].
+	/// Convert [`Self`] to a [`String`].
 	///
 	/// This uses [`toml_edit::ser::to_string_pretty`];
 	fn to_string(&self) -> Result<String, anyhow::Error> {
@@ -42,7 +42,7 @@ pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 		Ok(format!("{}\n", serde_plain::to_string(self)?))
 	}
 	#[inline(always)]
-	/// Create a `struct/enum` from a [`String`].
+	/// Create [`Self`] from a [`String`].
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_plain::from_str(string))
 	}

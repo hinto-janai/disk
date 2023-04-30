@@ -18,14 +18,14 @@ pub unsafe trait Json: serde::Serialize + serde::de::DeserializeOwned {
 
 	// Required functions for generic-ness.
 	#[inline(always)]
-	/// Convert a `struct/enum` to bytes.
+	/// Convert [`Self`] to bytes.
 	///
 	/// This uses [`serde_json::ser::to_vec_pretty`];
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		Ok(serde_json::ser::to_vec_pretty(self)?)
 	}
 	#[inline(always)]
-	/// Create a `struct/enum` from bytes.
+	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_json::de::from_slice(bytes))
 	}
@@ -37,7 +37,7 @@ pub unsafe trait Json: serde::Serialize + serde::de::DeserializeOwned {
 		common::convert_error(serde_json::ser::to_string_pretty(self))
 	}
 	#[inline(always)]
-	/// Convert a `struct/enum` to a [`String`].
+	/// Convert [`Self`] to a [`String`].
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		common::convert_error(serde_json::de::from_str(string))
 	}

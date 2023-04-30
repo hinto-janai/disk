@@ -32,7 +32,7 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	common::impl_binary!("bincode");
 
 	#[inline(always)]
-	/// Create a `struct/enum` from bytes.
+	/// Create a [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		let len = bytes.len();
 
@@ -55,7 +55,7 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	}
 
 	#[inline(always)]
-	/// Convert a `struct/enum` to bytes.
+	/// Convert [`Self`] to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		let mut vec = common::convert_error(ENCODING_OPTIONS.serialize(self))?;
 

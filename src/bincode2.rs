@@ -49,7 +49,7 @@ pub unsafe trait Bincode2: bincode2::Encode + bincode2::Decode {
 	common::impl_binary!("bincode2");
 
 	#[inline(always)]
-	/// Create a `struct/enum` from bytes.
+	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		let len = bytes.len();
 
@@ -75,7 +75,7 @@ pub unsafe trait Bincode2: bincode2::Encode + bincode2::Decode {
 	}
 
 	#[inline(always)]
-	/// Convert a `struct/enum` to bytes.
+	/// Convert [`Self`] to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
 		let mut vec = match bincode2::encode_to_vec(self, *ENCODING_OPTIONS) {
 			Ok(v)  => v,
