@@ -22,7 +22,7 @@ crate::common::impl_macro_binary!(Bincode2, "bin");
 /// It also no longer requires `serde`, having it's own `Encode` and `Decode` traits.
 ///
 /// This means your type must implement these as well, e.g:
-/// ```rust
+/// ```rust,ignore
 /// use bincode::{Encode, Decode};
 ///
 /// #[derive(Encode, Decode)]

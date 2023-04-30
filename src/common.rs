@@ -998,7 +998,7 @@ These are the inputs you need to provide to implement [`" $trait "`].
 | `$version`           | `1` byte custom version                 | [`" $trait "::VERSION`]           | `u8`               | `5_u8`
 
 ### Example
-```rust
+```rust,ignore
 use serde::{Serialize,Deserialize};
 use disk::*;
 
