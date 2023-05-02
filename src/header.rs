@@ -107,7 +107,7 @@ macro_rules! impl_header {
 			if bytes[0..24] == Self::HEADER {
 				Ok(bytes[24])
 			} else {
-				bail!("Bincode header failed to match.\nExpected: {:?}\nFound: {:?}", Self::HEADER, &bytes[0..24]);
+				bail!("Header bytes failed to match.\nExpected: {:?}\nFound: {:?}", Self::HEADER, &bytes[0..24]);
 			}
 		}
 	}
