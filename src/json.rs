@@ -19,9 +19,9 @@ crate::common::impl_macro!(Json, "json");
 /// ## Encoding
 /// The encoding option used is:
 /// ```txt
-/// // This is 4 spaces instead of the default 2.
 /// serde_json::ser::PrettyFormatter::with_indent(b"    ");
 /// ```
+/// This is 4 spaces instead of the default 2.
 ///
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
@@ -52,7 +52,7 @@ pub unsafe trait Json: serde::Serialize + serde::de::DeserializeOwned {
 		unsafe { Ok(String::from_utf8_unchecked(vec)) }
 	}
 	#[inline(always)]
-	/// Convert [`Self`] from a [`String`].
+	/// Create [`Self`] from a [`String`].
 	fn from_string(string: &str) -> Result<Self, anyhow::Error> {
 		Ok(serde_json::de::from_str(string)?)
 	}

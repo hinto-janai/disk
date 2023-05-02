@@ -187,10 +187,10 @@ macro_rules! impl_io {
 		///
 		/// - [`Self::exists()`] checks for `file.toml`.
 		/// - [`Self::exists_gzip()`] checks for `file.toml.gz`.
-		fn exists_gzip() -> Result<PathBuf, anyhow::Error> {
+		fn exists_gzip() -> Result<crate::Metadata, anyhow::Error> {
 			let path = Self::absolute_path_gzip()?;
 			match path.exists() {
-				true  => Ok(path),
+				true  => Ok(crate::Metadata::new(crate::common::filesize(&path), path)),
 				false => Err(anyhow!("{:?} doesn't exist", path)),
 			}
 		}
@@ -570,27 +570,28 @@ macro_rules! impl_io {
 
 			if !path.exists() { return Ok(crate::Metadata::zero(path)) }
 
-			std::fs::rename(&path, &tmp)?;
 			let size = crate::common::filesize(&path);
+			std::fs::rename(&path, &tmp)?;
 			std::fs::remove_file(&tmp)?;
 
 			Ok(crate::Metadata::new(size, path))
 		}
 
 		/// Same as [`Self::rm_atomic()`] but looks for the `.gz` extension.
-		fn rm_atomic_gzip() -> Result<PathBuf, anyhow::Error> {
+		fn rm_atomic_gzip() -> Result<crate::Metadata, anyhow::Error> {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
 			tmp.push(Self::FILE_NAME_TMP);
 			path.push(Self::FILE_NAME_GZIP);
 
-			if !path.exists() { return Ok(path) }
+			if !path.exists() { return Ok(crate::Metadata::zero(path)) }
 
+			let size = crate::common::filesize(&path);
 			std::fs::rename(&path, &tmp)?;
 			std::fs::remove_file(&tmp)?;
 
-			Ok(path)
+			Ok(crate::Metadata::new(size, path))
 		}
 
 		/// Try deleting any leftover `.tmp` files from [`Self::save_atomic()`] or [`Self::save_atomic_gzip()`]
@@ -675,6 +676,112 @@ macro_rules! impl_common {
 			Ok(path)
 		}
 
+		#[inline(always)]
+		/// Check if the file exists.
+		///
+		/// On success, this returns:
+		/// - The file size in bytes
+		/// - The [`PathBuf`] it's located at
+		fn exists() -> Result<crate::Metadata, anyhow::Error> {
+			let path = Self::absolute_path()?;
+
+			match path.exists() {
+				true  => Ok(crate::Metadata::new(crate::common::filesize(&path), path)),
+				false => Err(anyhow!("{:?} does not exist", path)),
+			}
+		}
+
+		#[inline(always)]
+		/// Returns the file size in bytes and it's [`PathBuf`].
+		fn file_size() -> Result<crate::Metadata, anyhow::Error> {
+			let path = Self::absolute_path()?;
+			let file = std::fs::File::open(&path)?;
+			let size = file.metadata()?.len();
+
+			Ok(crate::Metadata::new(size, path))
+		}
+
+		/// Returns the full base path associated with this struct (PATH leading up to the file).
+		///
+		/// In contrast to [`Self::sub_dir_parent_path`], this returns all sub-directories,
+		/// e.g: `my/sub/dirs` would return `/.../my/sub/dirs`
+		///
+		/// This includes [`Self::PROJECT_DIRECTORY`], [`Self::SUB_DIRECTORIES`] and excludes [`Self::FILE_NAME`].
+		fn base_path() -> Result<PathBuf, anyhow::Error> {
+			// Get a `ProjectDir` from our project name.
+			let mut base = Self::project_dir_path()?;
+
+			// Append sub directories (if any).
+			if Self::SUB_DIRECTORIES.len() != 0 {
+				#[cfg(target_os = "windows")]
+				Self::SUB_DIRECTORIES.split_terminator(&['/', '\\'][..]).for_each(|dir| base.push(dir));
+				#[cfg(target_family = "unix")]
+				Self::SUB_DIRECTORIES.split_terminator('/').for_each(|dir| base.push(dir));
+			}
+
+			Ok(base)
+		}
+
+		#[inline(always)]
+		/// Returns the absolute PATH of the file associated with this struct.
+		///
+		/// This includes [`Self::PROJECT_DIRECTORY`], [`Self::SUB_DIRECTORIES`] and [`Self::FILE_NAME`].
+		fn absolute_path() -> Result<PathBuf, anyhow::Error> {
+			let mut base = Self::base_path()?;
+			base.push(Self::FILE_NAME);
+
+			common::assert_safe_path(&base)?;
+
+			Ok(base)
+		}
+
+		/// Try deleting the file.
+		///
+		/// This will return success if the file doesn't exist or if deleted.
+		///
+		/// It will return failure if the file existed but could not be deleted or if any other error occurs.
+		///
+		/// On success, this returns:
+		/// - The amount of bytes removed
+		/// - The [`PathBuf`] that was removed
+		fn rm() -> Result<crate::Metadata, anyhow::Error> {
+			let mut path = Self::base_path()?;
+			path.push(Self::FILE_NAME);
+
+			if !path.exists() { return Ok(crate::Metadata::zero(path)) }
+
+			let size = crate::common::filesize(&path);
+			std::fs::remove_file(&path)?;
+			Ok(crate::Metadata::new(size, path))
+		}
+
+		#[inline]
+		/// Recursively remove this file's sub-directories.
+		///
+		/// This deletes _all_ directories starting from the parent [`Self::SUB_DIRECTORIES`].
+		/// For example:
+		/// ```rust,ignore
+		/// disk::toml!(State, disk::Dir::Data, "MyProject", "some/sub/dirs", "state");
+		/// ```
+		/// Everything starting from  `~/.local/share/myproject/some` gets removed recursively.
+		///
+		/// This is akin to running:
+		/// ```ignore
+		/// rm -rf ~/.local/share/myproject/some
+		/// ```
+		///
+		/// This function calls [`std::fs::remove_dir_all`], which does _not_ follow symlinks.
+		///
+		/// On success, this returns:
+		/// - The amount of bytes removed
+		/// - The [`PathBuf`] that was removed
+		fn rm_sub() -> Result<crate::Metadata, anyhow::Error> {
+			let path = Self::sub_dir_parent_path()?;
+			let size = crate::common::filesize(&path);
+			std::fs::remove_dir_all(&path)?;
+			Ok(crate::Metadata::new(size, path))
+		}
+
 		#[inline]
 		/// Recursively remove this file's project directory.
 		///
@@ -698,55 +805,10 @@ macro_rules! impl_common {
 		/// On success, this returns:
 		/// - The amount of bytes removed
 		/// - The [`PathBuf`] that was removed
-		fn rm_rf() -> Result<crate::Metadata, anyhow::Error> {
-			let path = Self::base_path()?;
+		fn rm_project() -> Result<crate::Metadata, anyhow::Error> {
+			let path = Self::project_dir_path()?;
 			let size = crate::common::filesize(&path);
 			std::fs::remove_dir_all(&path)?;
-			Ok(crate::Metadata::new(size, path))
-		}
-
-		/// Try deleting the file.
-		///
-		/// This will return success if the file doesn't exist or if deleted.
-		///
-		/// It will return failure if the file existed but could not be deleted or if any other error occurs.
-		///
-		/// On success, this returns:
-		/// - The amount of bytes removed
-		/// - The [`PathBuf`] that was removed
-		fn rm() -> Result<crate::Metadata, anyhow::Error> {
-			let mut path = Self::base_path()?;
-			path.push(Self::FILE_NAME);
-
-			if !path.exists() { return Ok(crate::Metadata::zero(path)) }
-
-			let size = crate::common::filesize(&path);
-			std::fs::remove_file(&path)?;
-			Ok(crate::Metadata::new(size, path))
-		}
-
-		#[inline(always)]
-		/// Check if the file exists.
-		///
-		/// On success, this returns:
-		/// - The file size in bytes
-		/// - The [`PathBuf`] it's located at
-		fn exists() -> Result<crate::Metadata, anyhow::Error> {
-			let path = Self::absolute_path()?;
-
-			match path.exists() {
-				true  => Ok(crate::Metadata::new(crate::common::filesize(&path), path)),
-				false => Err(anyhow!("{:?} does not exist", path)),
-			}
-		}
-
-		#[inline(always)]
-		/// Returns the file size in bytes and it's [`PathBuf`].
-		fn file_size() -> Result<crate::Metadata, anyhow::Error> {
-			let path = Self::absolute_path()?;
-			let file = std::fs::File::open(&path)?;
-			let size = file.metadata()?.len();
-
 			Ok(crate::Metadata::new(size, path))
 		}
 
@@ -788,7 +850,7 @@ macro_rules! impl_common {
 
 		/// Returns the top-level parent sub-directory associated with this struct.
 		///
-		/// If _only_ returns the top level sub-directory, so if multiple are defined,
+		/// This _only_ returns the top level sub-directory, so if multiple are defined,
 		/// only the first will be returned, e.g: `my/sub/dirs` would return `/.../my`
 		///
 		/// If no sub-directory is defined, this will return the PATH leading up to [`Self::PROJECT_DIRECTORY`].
@@ -807,40 +869,6 @@ macro_rules! impl_common {
 					base.push(sub);
 				}
 			}
-
-			Ok(base)
-		}
-
-		/// Returns the full base path associated with this struct (PATH leading up to the file).
-		///
-		/// In contrast to [`Self::sub_dir_parent_path`], this returns all sub-directories,
-		/// e.g: `my/sub/dirs` would return `/.../my/sub/dirs`
-		///
-		/// This includes [`Self::PROJECT_DIRECTORY`], [`Self::SUB_DIRECTORIES`] and excludes [`Self::FILE_NAME`].
-		fn base_path() -> Result<PathBuf, anyhow::Error> {
-			// Get a `ProjectDir` from our project name.
-			let mut base = Self::project_dir_path()?;
-
-			// Append sub directories (if any).
-			if Self::SUB_DIRECTORIES.len() != 0 {
-				#[cfg(target_os = "windows")]
-				Self::SUB_DIRECTORIES.split_terminator(&['/', '\\'][..]).for_each(|dir| base.push(dir));
-				#[cfg(target_family = "unix")]
-				Self::SUB_DIRECTORIES.split_terminator('/').for_each(|dir| base.push(dir));
-			}
-
-			Ok(base)
-		}
-
-		#[inline(always)]
-		/// Returns the absolute PATH of the file associated with this struct.
-		///
-		/// This includes [`Self::PROJECT_DIRECTORY`], [`Self::SUB_DIRECTORIES`] and [`Self::FILE_NAME`].
-		fn absolute_path() -> Result<PathBuf, anyhow::Error> {
-			let mut base = Self::base_path()?;
-			base.push(Self::FILE_NAME);
-
-			common::assert_safe_path(&base)?;
 
 			Ok(base)
 		}
