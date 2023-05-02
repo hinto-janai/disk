@@ -305,8 +305,10 @@ compile_error!("disk is only compatible with Window/macOS/Linux/WASM");
 mod common;
 mod dir;
 mod header;
+mod metadata;
 pub use crate::dir::Dir;
 pub use anyhow::Error;
+pub use metadata::*;
 
 //------ Hidden re-exports
 #[doc(hidden)]

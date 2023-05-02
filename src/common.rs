@@ -77,6 +77,15 @@ pub(crate) fn compress(bytes: &[u8]) -> Result<Vec<u8>, Error> {
 	Ok(vec)
 }
 
+#[inline(always)]
+// Returns 0 on error.
+pub(crate) fn filesize(path: &Path) -> u64 {
+	match std::fs::metadata(path) {
+		Ok(f)  => f.len(),
+		Err(_) => 0,
+	}
+}
+
 //---------------------------------------------------------------------------------------------------- impl_file_bytes
 // Implements `file_bytes()` for 32/64bit.
 macro_rules! impl_file_bytes {
@@ -96,11 +105,15 @@ macro_rules! impl_file_bytes {
 			}
 
 			let mut buf = {
-				if start == end {
-					Vec::with_capacity(1)
-				} else {
-					Vec::with_capacity(end - start)
-				}
+				let len = match start == end {
+					true  => 1,
+					false => end - start,
+				};
+				let mut vec = Vec::with_capacity(len);
+				// SAFETY:
+				// New length is == to capacity.
+				unsafe { vec.set_len(len); }
+				vec
 			};
 
 			let file = std::fs::File::open(Self::absolute_path()?)?;
@@ -110,6 +123,34 @@ macro_rules! impl_file_bytes {
 			file.read_exact(&mut buf)?;
 
 			Ok(buf)
+		}
+
+		#[inline]
+		#[cfg(target_pointer_width = $bit)]
+		/// Same as [`Self::file_bytes`] but with [`memmap2`](https://docs.rs/memmap2).
+		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		fn file_bytes_memmap(start: usize, end: usize) -> Result<Vec<u8>, anyhow::Error> {
+			use std::io::Read;
+			use std::io::{Seek,SeekFrom};
+
+			if start > end {
+				bail!("file_bytes(): start > end");
+			}
+
+			let file = std::fs::File::open(Self::absolute_path()?)?;
+			let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
+			let len = mmap.len();
+			drop(file);
+
+			if mmap.len() < end {
+				bail!("file_bytes(): file length ({len}) less than end ({end})");
+			}
+
+			Ok(mmap[start..end].to_vec())
 		}
 	}
 }
@@ -146,8 +187,12 @@ macro_rules! impl_io {
 		///
 		/// - [`Self::exists()`] checks for `file.toml`.
 		/// - [`Self::exists_gzip()`] checks for `file.toml.gz`.
-		fn exists_gzip() -> Result<bool, anyhow::Error> {
-			Ok(Self::absolute_path_gzip()?.exists())
+		fn exists_gzip() -> Result<PathBuf, anyhow::Error> {
+			let path = Self::absolute_path_gzip()?;
+			match path.exists() {
+				true  => Ok(path),
+				false => Err(anyhow!("{:?} doesn't exist", path)),
+			}
 		}
 
 		#[inline(always)]
@@ -192,10 +237,10 @@ macro_rules! impl_io {
 
 		/// Try saving as a file.
 		///
-		/// This will return the amount of `bytes` saved on success.
+		/// This will return the amount of `bytes` saved and the [`PathBuf`] on success.
 		///
  		/// Calling this will automatically create the directories leading up to the file.
-		fn save(&self) -> Result<usize, anyhow::Error> {
+		fn save(&self) -> Result<crate::Metadata, anyhow::Error> {
 			let bytes = self.into_writeable_fmt()?;
 
 			// Create PATH.
@@ -204,8 +249,8 @@ macro_rules! impl_io {
 			path.push(Self::FILE_NAME);
 
 			// Write.
-			std::fs::write(path, &bytes)?;
-			Ok(bytes.len())
+			std::fs::write(&path, &bytes)?;
+			Ok(crate::Metadata::new(bytes.len() as u64, path))
 		}
 
 
@@ -215,7 +260,7 @@ macro_rules! impl_io {
 		/// You _must_ understand all the invariants that `memmap` comes with.
 		///
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
-		unsafe fn save_memmap(&self) -> Result<usize, anyhow::Error> {
+		unsafe fn save_memmap(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Create bytes.
 			let bytes = self.to_bytes()?;
 			let len = bytes.len();
@@ -230,7 +275,7 @@ macro_rules! impl_io {
 				.read(true)
 				.write(true)
 				.create(true)
-				.open(path)?;
+				.open(&path)?;
 
 			// Resize file length.
 			#[cfg(target_pointer_width = "64")]
@@ -244,14 +289,14 @@ macro_rules! impl_io {
 			mmap.copy_from_slice(&bytes);
 			mmap.flush()?;
 
-			Ok(len)
+			Ok(crate::Metadata::new(len as u64, path))
 		}
 
 		/// Try saving as a compressed file using `gzip`.
 		///
-		/// This will return a tuple of:
-		/// - The amount of `bytes` before compression
-		/// - The amount of compressed `bytes` actually saved
+		/// On success, this will return:
+		/// - The amount of compressed `bytes` saved to disk
+		/// - The [`PathBuf`] of the file
 		///
 		/// This will suffix the file with `.gz`, for example:
 		/// ```text,ignore
@@ -260,7 +305,7 @@ macro_rules! impl_io {
 		/// ```
 		///
 		/// Calling this will automatically create the directories leading up to the file.
-		fn save_gzip(&self) -> Result<(usize, usize), anyhow::Error> {
+		fn save_gzip(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Compress bytes and write.
 			let bytes = self.to_bytes()?;
 			let len = bytes.len();
@@ -272,9 +317,9 @@ macro_rules! impl_io {
 			std::fs::create_dir_all(&path)?;
 			path.push(Self::FILE_NAME_GZIP);
 
-			std::fs::write(path, c)?;
+			std::fs::write(&path, c)?;
 
-			Ok((len, c_len))
+			Ok(crate::Metadata::new(c_len as u64, path))
 		}
 
 		/// Same as [`Self::save_gzip`] but with [`memmap2`](https://docs.rs/memmap2).
@@ -283,7 +328,7 @@ macro_rules! impl_io {
 		/// You _must_ understand all the invariants that `memmap` comes with.
 		///
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
-		unsafe fn save_gzip_memmap(&self) -> Result<(usize, usize), anyhow::Error> {
+		unsafe fn save_gzip_memmap(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Compress bytes and write.
 			let bytes = self.to_bytes()?;
 			let len = bytes.len();
@@ -300,7 +345,7 @@ macro_rules! impl_io {
 				.read(true)
 				.write(true)
 				.create(true)
-				.open(path)?;
+				.open(&path)?;
 
 			// Resize file length.
 			#[cfg(target_pointer_width = "64")]
@@ -314,7 +359,7 @@ macro_rules! impl_io {
 			mmap.copy_from_slice(&c);
 			mmap.flush()?;
 
-			Ok((len, c_len))
+			Ok(crate::Metadata::new(c_len as u64, path))
 		}
 
 		/// Try saving to a TEMPORARY file first, then renaming it to the associated file.
@@ -330,10 +375,10 @@ macro_rules! impl_io {
 		/// ```
 		/// Already existing `.tmp` files will be overwritten.
 		///
-		/// This will return the amount of `bytes` saved on success.
+		/// This will return the amount of `bytes` saved and the [`PathBuf`] on success.
 		///
 		/// Calling this will automatically create the directories leading up to the file.
-		fn save_atomic(&self) -> Result<usize, anyhow::Error> {
+		fn save_atomic(&self) -> Result<crate::Metadata, anyhow::Error> {
 			let bytes = self.into_writeable_fmt()?;
 
 			// Create PATH.
@@ -357,11 +402,11 @@ macro_rules! impl_io {
 				bail!(e);
 			}
 
-			Ok(bytes.len())
+			Ok(crate::Metadata::new(bytes.len() as u64, path))
 		}
 
 		/// Combines [`Self::save_gzip()`] and [`Self::save_atomic()`].
-		fn save_atomic_gzip(&self) -> Result<(usize, usize), anyhow::Error> {
+		fn save_atomic_gzip(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Compress bytes.
 			let bytes = self.to_bytes()?;
 			let len = bytes.len();
@@ -389,7 +434,7 @@ macro_rules! impl_io {
 				bail!(e);
 			}
 
-			Ok((len, c_len))
+			Ok(crate::Metadata::new(c_len as u64, path))
 		}
 
 		/// Same as [`Self::save_atomic()`] but with [`memmap2`](https://docs.rs/memmap2).
@@ -398,7 +443,7 @@ macro_rules! impl_io {
 		/// You _must_ understand all the invariants that `memmap` comes with.
 		///
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
-		unsafe fn save_atomic_memmap(&self) -> Result<usize, anyhow::Error> {
+		unsafe fn save_atomic_memmap(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Create bytes
 			let bytes = self.to_bytes()?;
 			let len = bytes.len();
@@ -443,7 +488,7 @@ macro_rules! impl_io {
 				bail!(e);
 			}
 
-			Ok(len)
+			Ok(crate::Metadata::new(len as u64, path))
 		}
 
 		/// Same as [`Self::save_atomic_gzip()`] but with [`memmap2`](https://docs.rs/memmap2).
@@ -452,7 +497,7 @@ macro_rules! impl_io {
 		/// You _must_ understand all the invariants that `memmap` comes with.
 		///
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
-		unsafe fn save_atomic_gzip_memmap(&self) -> Result<(usize, usize), anyhow::Error> {
+		unsafe fn save_atomic_gzip_memmap(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Compress bytes.
 			let bytes = self.to_bytes()?;
 			let len = bytes.len();
@@ -499,12 +544,16 @@ macro_rules! impl_io {
 				bail!(e);
 			}
 
-			Ok((len, c_len))
+			Ok(crate::Metadata::new(c_len as u64, path))
 		}
 
 		/// Rename the associated file before attempting to delete it.
 		///
 		/// This lowers the chance for data corruption on interrupt.
+		///
+		/// On success, this returns:
+		/// - The amount of bytes removed
+		/// - The [`PathBuf`] that was removed
 		///
 		/// The temporary file name is: `file_name` + `extension` + `.tmp`, for example:
 		/// ```text,ignore
@@ -512,35 +561,36 @@ macro_rules! impl_io {
 		/// config.toml.tmp // <- Temporary version
 		/// ```
 		/// Already existing `.tmp` files will be overwritten.
-		fn rm_atomic() -> Result<(), anyhow::Error> {
+		fn rm_atomic() -> Result<crate::Metadata, anyhow::Error> {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
 			tmp.push(Self::FILE_NAME_TMP);
 			path.push(Self::FILE_NAME);
 
-			if !path.exists() { return Ok(()) }
+			if !path.exists() { return Ok(crate::Metadata::zero(path)) }
 
 			std::fs::rename(&path, &tmp)?;
+			let size = crate::common::filesize(&path);
 			std::fs::remove_file(&tmp)?;
 
-			Ok(())
+			Ok(crate::Metadata::new(size, path))
 		}
 
 		/// Same as [`Self::rm_atomic()`] but looks for the `.gz` extension.
-		fn rm_atomic_gzip() -> Result<(), anyhow::Error> {
+		fn rm_atomic_gzip() -> Result<PathBuf, anyhow::Error> {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
 			tmp.push(Self::FILE_NAME_TMP);
 			path.push(Self::FILE_NAME_GZIP);
 
-			if !path.exists() { return Ok(()) }
+			if !path.exists() { return Ok(path) }
 
 			std::fs::rename(&path, &tmp)?;
 			std::fs::remove_file(&tmp)?;
 
-			Ok(())
+			Ok(path)
 		}
 
 		/// Try deleting any leftover `.tmp` files from [`Self::save_atomic()`] or [`Self::save_atomic_gzip()`]
@@ -571,6 +621,16 @@ macro_rules! impl_io {
 			common::assert_safe_path(&base)?;
 
 			Ok(base)
+		}
+
+		#[inline(always)]
+		/// Returns the `gzip` file size in bytes and it's [`PathBuf`].
+		fn file_size_gzip() -> Result<crate::Metadata, anyhow::Error> {
+			let path = Self::absolute_path_gzip()?;
+			let file = std::fs::File::open(&path)?;
+			let size = file.metadata()?.len();
+
+			Ok(crate::Metadata::new(size, path))
 		}
 
 		$crate::common::impl_file_bytes!("64", u64);
@@ -634,8 +694,15 @@ macro_rules! impl_common {
 		/// The worst you can do with this function is delete your project's directory.
 		///
 		/// This function calls [`std::fs::remove_dir_all`], which does _not_ follow symlinks.
-		fn rm_rf() -> Result<(), anyhow::Error> {
-			Ok(std::fs::remove_dir_all(Self::base_path()?)?)
+		///
+		/// On success, this returns:
+		/// - The amount of bytes removed
+		/// - The [`PathBuf`] that was removed
+		fn rm_rf() -> Result<crate::Metadata, anyhow::Error> {
+			let path = Self::base_path()?;
+			let size = crate::common::filesize(&path);
+			std::fs::remove_dir_all(&path)?;
+			Ok(crate::Metadata::new(size, path))
 		}
 
 		/// Try deleting the file.
@@ -643,55 +710,72 @@ macro_rules! impl_common {
 		/// This will return success if the file doesn't exist or if deleted.
 		///
 		/// It will return failure if the file existed but could not be deleted or if any other error occurs.
-		fn rm() -> Result<(), anyhow::Error> {
+		///
+		/// On success, this returns:
+		/// - The amount of bytes removed
+		/// - The [`PathBuf`] that was removed
+		fn rm() -> Result<crate::Metadata, anyhow::Error> {
 			let mut path = Self::base_path()?;
 			path.push(Self::FILE_NAME);
 
-			if !path.exists() { return Ok(()) }
+			if !path.exists() { return Ok(crate::Metadata::zero(path)) }
 
-			Ok(std::fs::remove_file(path)?)
+			let size = crate::common::filesize(&path);
+			std::fs::remove_file(&path)?;
+			Ok(crate::Metadata::new(size, path))
 		}
 
 		#[inline(always)]
 		/// Check if the file exists.
 		///
-		/// - `true`  == The file exists.
-		/// - `false` == The file does not exist.
-		/// - `anyhow::Error` == There was an error, existance is unknown.
-		fn exists() -> Result<bool, anyhow::Error> {
+		/// On success, this returns:
+		/// - The file size in bytes
+		/// - The [`PathBuf`] it's located at
+		fn exists() -> Result<crate::Metadata, anyhow::Error> {
 			let path = Self::absolute_path()?;
 
-			Ok(path.exists())
+			match path.exists() {
+				true  => Ok(crate::Metadata::new(crate::common::filesize(&path), path)),
+				false => Err(anyhow!("{:?} does not exist", path)),
+			}
 		}
 
 		#[inline(always)]
-		/// Returns the file size in bytes.
-		fn file_size() -> Result<u64, anyhow::Error> {
+		/// Returns the file size in bytes and it's [`PathBuf`].
+		fn file_size() -> Result<crate::Metadata, anyhow::Error> {
 			let path = Self::absolute_path()?;
-			let file = std::fs::File::open(path)?;
+			let file = std::fs::File::open(&path)?;
+			let size = file.metadata()?.len();
 
-			Ok(file.metadata()?.len())
+			Ok(crate::Metadata::new(size, path))
 		}
 
 		#[inline(always)]
-		/// Returns the file's parent sub-directory size in bytes.
+		/// Returns the file's parent sub-directory size in bytes and it's [`PathBuf`].
+		///
+		/// This errors if the PATH does not exist.
 		///
 		/// This starts from the first [`Self::SUB_DIRECTORIES`],
 		/// and does not include the [`Self::PROJECT_DIRECTORY`].
-		fn sub_dir_size() -> Result<u64, anyhow::Error> {
+		fn sub_dir_size() -> Result<crate::Metadata, anyhow::Error> {
 			let path = Self::sub_dir_parent_path()?;
-			let dir = std::fs::File::open(path)?;
+			let dir = std::fs::File::open(&path)?;
+			let size = dir.metadata()?.len();
 
-			Ok(dir.metadata()?.len())
+			Ok(crate::Metadata::new(size, path))
 		}
 
 		#[inline(always)]
-		/// Returns the file's project directory size in bytes ([`Self::PROJECT_DIRECTORY`])
-		fn project_dir_size() -> Result<u64, anyhow::Error> {
+		/// Returns the file's project directory size
+		/// in bytes ([`Self::PROJECT_DIRECTORY`]) and it's [`PathBuf`].
+		///
+		/// This errors if the PATH does not exist.
+		fn project_dir_size() -> Result<crate::Metadata, anyhow::Error> {
 			let path = Self::project_dir_path()?;
-			let file = std::fs::File::open(path)?;
+			let file = std::fs::File::open(&path)?;
+			let size = file.metadata()?.len();
 
-			Ok(file.metadata()?.len())
+			Ok(crate::Metadata::new(size, path))
 		}
 
 		/// Return the full parent project directory associated with this struct.
@@ -699,7 +783,7 @@ macro_rules! impl_common {
 		/// This is the `PATH` leading up to [`Self::PROJECT_DIRECTORY`].
 		fn project_dir_path() -> Result<PathBuf, anyhow::Error> {
 			// Get a `ProjectDir` from our project name.
-			Ok(common::get_projectdir(&Self::OS_DIRECTORY, &Self::PROJECT_DIRECTORY)?.to_path_buf())
+			Ok(common::get_projectdir(&Self::OS_DIRECTORY, &Self::PROJECT_DIRECTORY)?)
 		}
 
 		/// Returns the top-level parent sub-directory associated with this struct.
@@ -1034,7 +1118,7 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 						const HEADER:             [u8; 24]     = $header;
 						const VERSION:            u8           = $version;
 					}
-				}
+				};
 			}
 			pub(crate) use [<$trait:lower>];
 		}
@@ -1095,7 +1179,7 @@ This example would be located at `~/.local/share/myproject/some/dirs/state`.
 						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.tmp", $file_name);
 						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.gzip.tmp", $file_name);
 					}
-				}
+				};
 			}
 			pub(crate) use [<$trait:lower>];
 		}
@@ -1107,7 +1191,7 @@ pub(crate) use impl_macro_no_ext;
 macro_rules! impl_macro {
 	($trait:ident, $file_ext:literal) => {
 		use $crate::Dir;
-		paste::item! {
+		paste::paste! {
 			#[doc = "
 Implement the [`" $trait "`] trait
 
@@ -1156,14 +1240,53 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.{}.tmp", $file_name, $file_ext);
 						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gzip.tmp", $file_name, $file_ext);
 					}
-				}
+				};
 			}
 			pub(crate) use [<$trait:lower>];
 		}
+
 	};
 }
 pub(crate) use impl_macro;
 
+//macro_rules! impl_macro_outer {
+//	($trait:ident, $file_ext:literal) => {
+//		paste::paste! {
+//			// No `Dir`.
+//			($data:ty, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
+//				$crate::[<$trait:lower>]!($data, $crate::Dir::Data, $project_directory, $sub_directories, $file_name);
+//			};
+//			// No `file_name`.
+//			($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt) => {
+//				$crate::[<$trait:lower>]!($data, $dir, $project_directory, $sub_directories, $crate::convert_case!(lower_camel, $data));
+//			};
+//			// No `sub_dirs`.
+//			($data:ty, $project_directory:tt, $file_name:tt) => {
+//				$crate::[<$trait:lower>]!($data, $dir, $project_directory, "", $file_name);
+//			};
+//			// No `Dir` + `sub_dirs`.
+//			($data:ty, $project_directory:tt, $file_name:tt) => {
+//				$crate::[<$trait:lower>]!($data, $crate::Dir::Data, $project_directory, "", $file_name);
+//			};
+//			// No `Dir` + `file_name`.
+//			($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt) => {
+//				$crate::[<$trait:lower>]!($data, $crate::Dir::Data, $project_directory, $sub_directories, $crate::convert_case!(lower_camel, $data));
+//			};
+//			// No `sub_dirs` + `file_name`.
+//			($data:ty, $project_directory:tt, $sub_directories:tt) => {
+//				$crate::[<$trait:lower>]!($data, $dir, $project_directory, "", $crate::convert_case!(lower_camel, $data));
+//			};
+//			// No `Dir` + `sub_dirs` + `file_name`.
+//			($data:ty, $project_directory:tt, $sub_directories:tt) => {
+//				$crate::[<$trait:lower>]!($data, $crate::Dir::Data, $project_directory, "", $crate::convert_case!(lower_camel, $data));
+//			};
+//			($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
+//				$crate::impl_macro!($data, $dir, $project_directory, $sub_directories, $file_name);
+//			};
+//		}
+//	}
+//}
+//pub(crate) use impl_macro_outer;
 //---------------------------------------------------------------------------------------------------- TESTS
 //#[cfg(test)]
 //mod test {

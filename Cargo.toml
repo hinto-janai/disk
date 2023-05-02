@@ -29,7 +29,7 @@ rustc-args = ["--cfg", "docsrs"]
 # Required.
 anyhow       = "1.0.71"
 #disk_derive = { path = "../disk_derive" }
-directories  = "5.0.0"
+directories  = "5.0.1"
 serde        = { version = "1.0.160", features = ["derive"] }
 const_format = { version = "0.2.30", features = ["rust_1_51", "assertcp", "rust_1_64"] }
 const-str    = { version = "0.5.4", features = ["case"] }
@@ -51,4 +51,4 @@ bson         = { version = "2.6.1", optional = true }
 serde_plain  = { version = "1.0.1", optional = true }
 postcard     = { version = "1.0.4", features = ["alloc", "use-std"], default-features = false, optional = true }
 ron          = { version = "0.8.0", optional = true }
-bincode2     = { package = "bincode", version = "2.0.0-rc.3", optional = true }
+bincode2     = { package = "bincode", version = "2.0.0-rc.3", optional = true, features = ["derive", "std", "alloc"] }
