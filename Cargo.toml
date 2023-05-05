@@ -1,6 +1,6 @@
 [package]
 name = "disk"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 authors = ["hinto.janai <hinto.janai@protonmail.com>"]
 description = "(De)serialize files to/from disk"
@@ -30,7 +30,7 @@ rustc-args = ["--cfg", "docsrs"]
 anyhow       = "1.0.71"
 #disk_derive = { path = "../disk_derive" }
 directories  = "5.0.1"
-serde        = { version = "1.0.160", features = ["derive"] }
+serde        = { version = "1.0.162", features = ["derive"] }
 const_format = { version = "0.2.30", features = ["rust_1_51", "assertcp", "rust_1_64"] }
 const-str    = { version = "0.5.4", features = ["case"] }
 flate2       = "1.0.26"
