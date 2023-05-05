@@ -67,7 +67,14 @@ impl Metadata {
 //---------------------------------------------------------------------------------------------------- Display
 impl std::fmt::Display for Metadata {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{} bytes @ {}", self.size, self.path.display())
+		#[cfg(feature = "bytesize")]
+		{
+			write!(f, "{} @ {}", bytesize::ByteSize::b(self.size), self.path.display())
+		}
+		#[cfg(not(feature = "bytesize"))]
+		{
+			write!(f, "{} @ {}", self.size, self.path.display())
+		}
 	}
 }
 

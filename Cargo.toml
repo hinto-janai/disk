@@ -19,7 +19,7 @@ pickle      = ["serde-pickle"]
 messagepack = ["rmp-serde"]
 plain       = ["serde_plain"]
 empty       = []
-full        = ["toml", "json", "yaml", "log", "bincode", "pickle", "messagepack", "bson", "plain", "empty", "postcard", "ron", "bincode2"]
+full        = ["toml", "json", "yaml", "log", "bincode", "pickle", "messagepack", "bson", "plain", "empty", "postcard", "ron", "bincode2", "bytesize"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -52,3 +52,4 @@ serde_plain  = { version = "1.0.1", optional = true }
 postcard     = { version = "1.0.4", features = ["alloc", "use-std"], default-features = false, optional = true }
 ron          = { version = "0.8.0", optional = true }
 bincode2     = { package = "bincode", version = "2.0.0-rc.3", optional = true, features = ["derive", "std", "alloc"] }
+bytesize     = { version = "1.2.0", optional = true }
