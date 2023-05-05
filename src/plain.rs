@@ -16,6 +16,13 @@ crate::common::impl_macro!(Plain, "txt");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_file()` impl.
+	fn __from_file() -> Result <Self, anyhow::Error> {
+		Ok(Self::from_bytes(&Self::read_to_bytes()?)?)
+	}
+
 	// Required functions for generic-ness.
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.

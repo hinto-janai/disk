@@ -5,6 +5,10 @@ use crate::common;
 //use log::{info,error,warn,trace,debug};
 //use serde::{Serialize,Deserialize};
 use rmp_serde::{Deserializer, Serializer};
+use std::io::{
+	Read,Write,
+	BufReader,BufWriter,
+};
 
 //---------------------------------------------------------------------------------------------------- Rmp
 crate::common::impl_macro!(MessagePack, "messagepack");
@@ -16,6 +20,15 @@ crate::common::impl_macro!(MessagePack, "messagepack");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_file()` impl.
+	fn __from_file() -> Result <Self, anyhow::Error> {
+		let path = Self::absolute_path()?;
+		let file = std::fs::File::open(&path)?;
+		Ok(rmp_serde::decode::from_read(&mut BufReader::new(file))?)
+	}
+
 	#[inline(always)]
 	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {

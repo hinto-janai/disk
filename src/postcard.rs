@@ -15,6 +15,13 @@ crate::common::impl_macro!(Postcard, "bin");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Postcard: serde::Serialize + serde::de::DeserializeOwned {
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_file()` impl.
+	fn __from_file() -> Result <Self, anyhow::Error> {
+		Ok(Self::from_bytes(&Self::read_to_bytes()?)?)
+	}
+
 	#[inline(always)]
 	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {

@@ -231,8 +231,19 @@
 //! ```
 
 //------------------------------------------------------------------------------------------------------------------------
-//! ### File Formats
+//! ### Feature Flags
 //! No file formats are enabled by default, you must enable them with feature flags.
+//!
+//! Enabling the `bytesize` feature makes [`Metadata`] use [`bytesize`](https://docs.rs/bytesize) for its [`Display`].
+//!
+//! For example, `println!("{metadata}")` which normally looks like:
+//! ```txt
+//! 312445 bytes @ /my/file/path
+//! ```
+//! will turn into:
+//! ```txt
+//! 312.4 KB @ /my/file/path
+//! ```
 //!
 //! Use the `full` feature flag to enable _everything_.
 //!

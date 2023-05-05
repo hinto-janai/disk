@@ -6,6 +6,10 @@ use crate::header::*;
 use bincode::config::*;
 //use log::{info,error,warn,trace,debug};
 //use serde::{Serialize,Deserialize};
+use std::io::{
+	Read,Write,
+	BufReader,BufWriter,
+};
 
 //---------------------------------------------------------------------------------------------------- Bincode
 lazy_static::lazy_static! {
@@ -29,18 +33,49 @@ common::impl_macro_binary!(Bincode, "bin");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_file()` impl.
+	fn __from_file() -> Result <Self, anyhow::Error> {
+		let path = Self::absolute_path()?;
+		let mut file = std::fs::File::open(&path)?;
+		Ok(Self::from_reader(&mut file)?)
+	}
+
 	#[inline(always)]
 	/// Create a [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
 		ensure_header!(bytes);
-		common::convert_error(ENCODING_OPTIONS.deserialize(&bytes[25..]))
+		Ok(ENCODING_OPTIONS.deserialize(&bytes[25..])?)
 	}
 
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
-		let mut vec = common::convert_error(ENCODING_OPTIONS.serialize(self))?;
+		let mut vec = ENCODING_OPTIONS.serialize(self)?;
 		header_return!(vec)
+	}
+
+	#[inline(always)]
+	/// Create [`Self`] directly from reader `R`.
+	fn from_reader<R>(reader: &mut R) -> Result<Self, anyhow::Error>
+		where
+			R: Read,
+	{
+		let mut bytes = [0_u8; 25];
+		reader.read_exact(&mut bytes)?;
+		ensure_header!(bytes);
+		Ok(ENCODING_OPTIONS.deserialize_from(&mut BufReader::new(reader))?)
+	}
+
+	#[inline(always)]
+	/// Convert [`Self`] to directly to the writer `W` without intermediate bytes.
+	fn to_writer<W>(&self, writer: &mut W) -> Result<(), anyhow::Error>
+		where
+			W: Write,
+	{
+		writer.write(&Self::full_header());
+		Ok(ENCODING_OPTIONS.serialize_into(&mut BufWriter::new(writer), self)?)
 	}
 
 	impl_header!();

@@ -15,16 +15,25 @@ crate::common::impl_macro!(Bson, "bson");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Bson: serde::Serialize + serde::de::DeserializeOwned {
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_file()` impl.
+	fn __from_file() -> Result <Self, anyhow::Error> {
+		let path = Self::absolute_path()?;
+		let mut file = std::fs::File::open(&path)?;
+		Ok(bson::from_reader(&mut file)?)
+	}
+
 	#[inline(always)]
 	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
-		common::convert_error(bson::from_slice(bytes))
+		Ok(bson::from_slice(bytes)?)
 	}
 
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.
 	fn to_bytes(&self) -> Result<Vec<u8>, anyhow::Error> {
-		common::convert_error(bson::to_vec(self))
+		Ok(bson::to_vec(self)?)
 	}
 
 	// Common data/functions.

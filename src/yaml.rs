@@ -2,6 +2,10 @@
 use anyhow::{anyhow,bail,ensure};
 use std::path::PathBuf;
 use crate::common;
+use std::io::{
+	Read,Write,
+	BufReader,BufWriter,
+};
 
 //---------------------------------------------------------------------------------------------------- Yaml
 crate::common::impl_macro!(Yaml, "yml");
@@ -13,6 +17,15 @@ crate::common::impl_macro!(Yaml, "yml");
 /// ## Safety
 /// When manually implementing, you are **promising** that the `PATH`'s manually specified are correct.
 pub unsafe trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_file()` impl.
+	fn __from_file() -> Result <Self, anyhow::Error> {
+		let path = Self::absolute_path()?;
+		let file = std::fs::File::open(&path)?;
+		Ok(serde_yaml::from_reader(&mut BufReader::new(file))?)
+	}
+
 	// Required functions for generic-ness.
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.

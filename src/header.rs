@@ -5,17 +5,17 @@ macro_rules! ensure_header {
 
 		// Ensure our `[u8; 25]` HEADER + VERSION bytes are there.
 		if len < 25 {
-			bail!("Invalid header bytes, total byte length less than 25: {}", len);
+			bail!("invalid header bytes, total byte length less than 25: {len}");
 		}
 
 		// Ensure our HEADER is correct.
 		if $bytes[..24] != Self::HEADER {
-			bail!("Incorrect header bytes\nExpected: {:?}\nFound: {:?}", Self::HEADER, &$bytes[..24],);
+			bail!("incorrect header bytes\nexpected: {:?}\nfound: {:?}", Self::HEADER, &$bytes[..24],);
 		}
 
 		// Ensure our VERSION is correct.
 		if $bytes[24] != Self::VERSION {
-			bail!("Incorrect version byte\nExpected: {:?}\nFound: {:?}", Self::VERSION, &$bytes[24],);
+			bail!("incorrect version byte\nexpected: {:?}\nfound: {:?}", Self::VERSION, &$bytes[24],);
 		}
 	}
 }
@@ -107,7 +107,7 @@ macro_rules! impl_header {
 			if bytes[0..24] == Self::HEADER {
 				Ok(bytes[24])
 			} else {
-				bail!("Header bytes failed to match.\nExpected: {:?}\nFound: {:?}", Self::HEADER, &bytes[0..24]);
+				bail!("header bytes failed to match.\nexpected: {:?}\nfound: {:?}", Self::HEADER, &bytes[0..24]);
 			}
 		}
 	}
