@@ -206,6 +206,32 @@ macro_rules! impl_io {
 			Ok(Self::from_bytes(&Self::read_to_bytes_gzip()?)?)
 		}
 
+		#[inline(always)]
+		/// Same as [`Self::from_file`] but with [`memmap2`](https://docs.rs/memmap2).
+		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn from_file_memmap() -> Result<Self, anyhow::Error> {
+			let file = std::fs::File::open(Self::absolute_path()?)?;
+			let mmap = unsafe { memmap2::Mmap::map(&file)? };
+			Ok(Self::from_bytes(&*mmap)?)
+		}
+
+		#[inline(always)]
+		/// Same as [`Self::from_file_gzip`] but with [`memmap2`](https://docs.rs/memmap2).
+		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn from_file_gzip_memmap() -> Result<Self, anyhow::Error> {
+			let file = std::fs::File::open(Self::absolute_path_gzip()?)?;
+			let mmap = unsafe { memmap2::Mmap::map(&file)? };
+			Ok(Self::from_bytes(&common::decompress(&*mmap)?)?)
+		}
+
 		/// Try saving as a file.
 		///
 		/// This will return the amount of `bytes` saved and the [`PathBuf`] on success.
