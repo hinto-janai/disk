@@ -317,9 +317,11 @@ mod common;
 mod dir;
 mod header;
 mod metadata;
+mod umask;
 pub use crate::dir::Dir;
 pub use anyhow::Error;
 pub use metadata::*;
+pub use umask::*;
 
 //------ Hidden re-exports
 #[doc(hidden)]
