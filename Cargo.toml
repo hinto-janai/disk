@@ -1,6 +1,6 @@
 [package]
 name = "disk"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
 authors = ["hinto.janai <hinto.janai@protonmail.com>"]
 description = "(De)serialize files to/from disk"
@@ -37,10 +37,10 @@ flate2       = "1.0.26"
 lazy_static  = "1.4.0"
 seq-macro    = "0.3.3"
 paste        = "1.0.12"
-memmap2      = "0.5.10"
+memmap2      = "0.6.1"
 
 [target.'cfg(unix)'.dependencies]
-libc         = "0.2.143"
+libc         = "0.2.144"
 
 # Optional.
 log          = { version = "0.4.17", optional = true }

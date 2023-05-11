@@ -49,32 +49,36 @@ pub(crate) fn assert_safe_path(path: &Path) -> Result<(), Error> {
 }
 
 #[inline(always)]
-pub(crate) fn decompress(bytes: &[u8]) -> Result<Vec<u8>, Error> {
+pub(crate) fn decompress<R>(reader: R) -> Result<Vec<u8>, Error>
+where
+	R: std::io::BufRead,
+{
 	use std::io::prelude::*;
-	use flate2::read::GzDecoder;
+	use flate2::bufread::GzDecoder;
 
 	// Buffer to store decompressed bytes.
 	let mut buf = Vec::new();
 
 	// Decode compressed file bytes into buffer.
-	GzDecoder::new(bytes).read_to_end(&mut buf)?;
+	GzDecoder::new(reader).read_to_end(&mut buf)?;
 
+	buf.shrink_to_fit();
 	Ok(buf)
 }
 
 #[inline(always)]
-// Returns length of compressed bytes.
 pub(crate) fn compress(bytes: &[u8]) -> Result<Vec<u8>, Error> {
 	use std::io::prelude::*;
 	use flate2::Compression;
 	use flate2::write::GzEncoder;
+	use std::io::BufReader;
 
 	// Compress bytes and write.
 	let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
 	encoder.write_all(bytes)?;
-	let vec = encoder.finish()?;
+	let buf = encoder.finish()?;
 
-	Ok(vec)
+	Ok(buf)
 }
 
 #[inline(always)]
@@ -85,6 +89,46 @@ pub(crate) fn filesize(path: &Path) -> u64 {
 		Err(_) => 0,
 	}
 }
+
+// Create a `File` -> `BufReader`.
+macro_rules! file_bufr {
+	() => {
+		std::io::BufReader::new(
+			std::fs::OpenOptions::new()
+			.read(true)
+			.write(true)
+			.create(true)
+			.open(Self::absolute_path()?)?
+		)
+	}
+}
+pub(crate) use file_bufr;
+
+// Create a `File` -> `BufReader` for gzip.
+macro_rules! file_bufr_gzip {
+	() => {
+		std::io::BufReader::new(
+			std::fs::OpenOptions::new()
+			.read(true)
+			.create(true)
+			.open(Self::absolute_path_gzip()?)?
+		)
+	}
+}
+pub(crate) use file_bufr_gzip;
+
+// Create a `File` -> `BufWriter` from a `Path`.
+macro_rules! file_bufw {
+	($path:expr) => {
+		std::io::BufWriter::new(
+			std::fs::OpenOptions::new()
+			.write(true)
+			.create(true)
+			.open(&$path)?
+		)
+	}
+}
+pub(crate) use file_bufw;
 
 //---------------------------------------------------------------------------------------------------- impl_file_bytes
 // Implements `file_bytes()` for 32/64bit.
@@ -159,10 +203,24 @@ pub(crate) use impl_file_bytes;
 // Implements I/O methods for all traits.
 macro_rules! impl_io {
 	($file_ext:literal) => {
+		#[inline]
+		/// Consume [`Self`] into bytes
+		fn into_bytes(self) -> Result<Vec<u8>, anyhow::Error> {
+			self.to_bytes()
+		}
+
 		#[inline(always)]
 		/// Read the file directly as bytes.
 		fn read_to_bytes() -> Result<Vec<u8>, anyhow::Error> {
-			Ok(std::fs::read(Self::absolute_path()?)?)
+			use std::io::Read;
+
+			let mut bufr = crate::common::file_bufr!();
+			let mut vec  = match bufr.get_ref().metadata() {
+				Ok(m) => Vec::with_capacity(m.len().try_into().unwrap_or(0)),
+				_     => Vec::new(),
+			};
+			bufr.read_to_end(&mut vec)?;
+			Ok(vec)
 		}
 
 		/// Read the file directly as bytes, and attempt `gzip` decompression.
@@ -174,9 +232,7 @@ macro_rules! impl_io {
 		/// ```
 		fn read_to_bytes_gzip() -> Result<Vec<u8>, anyhow::Error> {
 			// Decode compressed file bytes.
-			let buf = common::decompress(
-				&std::fs::read(Self::absolute_path_gzip()?)?
-			)?;
+			let buf = common::decompress(crate::common::file_bufr!())?;
 
 			Ok(buf)
 		}
@@ -238,7 +294,8 @@ macro_rules! impl_io {
 		///
  		/// Calling this will automatically create the directories leading up to the file.
 		fn save(&self) -> Result<crate::Metadata, anyhow::Error> {
-			let bytes = self.into_writeable_fmt()?;
+			use std::io::Write;
+			let bytes = self.to_writeable_fmt()?;
 
 			// Create PATH.
 			let mut path = Self::base_path()?;
@@ -246,7 +303,7 @@ macro_rules! impl_io {
 			path.push(Self::FILE_NAME);
 
 			// Write.
-			std::fs::write(&path, &bytes)?;
+			crate::common::file_bufw!(&path).write_all(&bytes)?;
 			Ok(crate::Metadata::new(bytes.len() as u64, path))
 		}
 
@@ -303,9 +360,7 @@ macro_rules! impl_io {
 		/// Calling this will automatically create the directories leading up to the file.
 		fn save_gzip(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Compress bytes and write.
-			let bytes = self.to_bytes()?;
-			let len = bytes.len();
-			let c = common::compress(&bytes)?;
+			let c = common::compress(&self.to_bytes()?)?;
 			let c_len = c.len();
 
 			// Create PATH.
@@ -313,7 +368,9 @@ macro_rules! impl_io {
 			std::fs::create_dir_all(&path)?;
 			path.push(Self::FILE_NAME_GZIP);
 
-			std::fs::write(&path, c)?;
+			// Write.
+			use std::io::Write;
+			crate::common::file_bufw!(&path).write_all(&c)?;
 
 			Ok(crate::Metadata::new(c_len as u64, path))
 		}
@@ -326,9 +383,7 @@ macro_rules! impl_io {
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
 		unsafe fn save_gzip_memmap(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Compress bytes and write.
-			let bytes = self.to_bytes()?;
-			let len = bytes.len();
-			let c = common::compress(&bytes)?;
+			let c = common::compress(&self.to_bytes()?)?;
 			let c_len = c.len();
 
 			// Create PATH.
@@ -374,7 +429,7 @@ macro_rules! impl_io {
 		///
 		/// Calling this will automatically create the directories leading up to the file.
 		fn save_atomic(&self) -> Result<crate::Metadata, anyhow::Error> {
-			let bytes = self.into_writeable_fmt()?;
+			let bytes = self.to_writeable_fmt()?;
 
 			// Create PATH.
 			let mut path = Self::base_path()?;
@@ -386,7 +441,8 @@ macro_rules! impl_io {
 			path.push(Self::FILE_NAME);
 
 			// Write to TMP.
-			if let Err(e) = std::fs::write(&tmp, &bytes) {
+			use std::io::Write;
+			if let Err(e) = crate::common::file_bufw!(&tmp).write_all(&bytes) {
 				std::fs::remove_file(&tmp)?;
 				bail!(e);
 			}
@@ -403,9 +459,7 @@ macro_rules! impl_io {
 		/// Combines [`Self::save_gzip()`] and [`Self::save_atomic()`].
 		fn save_atomic_gzip(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Compress bytes.
-			let bytes = self.to_bytes()?;
-			let len = bytes.len();
-			let c = common::compress(&bytes)?;
+			let c = common::compress(&self.to_bytes()?)?;
 			let c_len = c.len();
 
 			// Create PATH.
@@ -418,7 +472,8 @@ macro_rules! impl_io {
 			path.push(Self::FILE_NAME_GZIP);
 
 			// Write to TMP.
-			if let Err(e) = std::fs::write(&tmp, &c) {
+			use std::io::Write;
+			if let Err(e) = crate::common::file_bufw!(&tmp).write_all(&c) {
 				std::fs::remove_file(&tmp)?;
 				bail!(e);
 			}
@@ -492,9 +547,7 @@ macro_rules! impl_io {
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
 		unsafe fn save_atomic_gzip_memmap(&self) -> Result<crate::Metadata, anyhow::Error> {
 			// Compress bytes.
-			let bytes = self.to_bytes()?;
-			let len = bytes.len();
-			let c = common::compress(&bytes)?;
+			let c = common::compress(&self.to_bytes()?)?;
 			let c_len = c.len();
 
 			// Create PATH.
@@ -503,8 +556,8 @@ macro_rules! impl_io {
 
 			// TMP and normal PATH.
 			let mut tmp = path.clone();
-			tmp.push(Self::FILE_NAME_TMP);
-			path.push(Self::FILE_NAME);
+			tmp.push(Self::FILE_NAME_GZIP_TMP);
+			path.push(Self::FILE_NAME_GZIP);
 
 			// Open file.
 			let file = std::fs::OpenOptions::new()
@@ -521,7 +574,7 @@ macro_rules! impl_io {
 
 			// Write to TMP.
 			let mut mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
-			mmap.copy_from_slice(&bytes);
+			mmap.copy_from_slice(&c);
 
 			// Hang on flush.
 			if let Err(e) = mmap.flush() {
@@ -573,7 +626,7 @@ macro_rules! impl_io {
 			let mut path = Self::base_path()?;
 
 			let mut tmp = path.clone();
-			tmp.push(Self::FILE_NAME_TMP);
+			tmp.push(Self::FILE_NAME_GZIP_TMP);
 			path.push(Self::FILE_NAME_GZIP);
 
 			if !path.exists() { return Ok(crate::Metadata::zero(path)) }
@@ -873,9 +926,15 @@ pub(crate) use impl_common;
 macro_rules! impl_string {
 	($file_ext:literal) => {
 		#[inline(always)]
-		/// Turn [`Self`] into a [`String`], maintaining formatting if possible.
-		fn into_writeable_fmt(&self) -> Result<String, anyhow::Error> {
-			self.to_string()
+		/// Turn [`Self`] into bytes, maintaining formatting if possible.
+		fn to_writeable_fmt(&self) -> Result<Vec<u8>, anyhow::Error> {
+			Ok(self.to_string()?.into_bytes())
+		}
+
+		#[inline(always)]
+		/// Consume [`Self`] into bytes, maintaining formatting if possible.
+		fn into_writeable_fmt(self) -> Result<Vec<u8>, anyhow::Error> {
+			Ok(self.to_string()?.into_bytes())
 		}
 
 		#[inline(always)]
@@ -897,7 +956,13 @@ macro_rules! impl_binary {
 	($file_ext:literal) => {
 		#[inline(always)]
 		/// Turn [`Self`] into bytes that can be written to disk.
-		fn into_writeable_fmt(&self) -> Result<Vec<u8>, anyhow::Error> {
+		fn to_writeable_fmt(&self) -> Result<Vec<u8>, anyhow::Error> {
+			self.to_bytes()
+		}
+
+		#[inline(always)]
+		/// Consume [`Self`] into bytes that can be written to disk.
+		fn into_writeable_fmt(self) -> Result<Vec<u8>, anyhow::Error> {
 			self.to_bytes()
 		}
 
@@ -1131,9 +1196,9 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 						const FILE:               &'static str = $file_name;
 						const FILE_EXT:           &'static str = $file_ext;
 						const FILE_NAME:          &'static str = $crate::const_format!("{}.{}", $file_name, $file_ext);
-						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.{}.gzip", $file_name, $file_ext);
+						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.{}.gz", $file_name, $file_ext);
 						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.{}.tmp", $file_name, $file_ext);
-						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gzip.tmp", $file_name, $file_ext);
+						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gz.tmp", $file_name, $file_ext);
 						const HEADER:             [u8; 24]     = $header;
 						const VERSION:            u8           = $version;
 					}
@@ -1194,9 +1259,9 @@ This example would be located at `~/.local/share/myproject/some/dirs/state`.
 						const FILE:               &'static str = $file_name;
 						const FILE_EXT:           &'static str = "";
 						const FILE_NAME:          &'static str = $file_name;
-						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.gzip", $file_name);
+						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.gz", $file_name);
 						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.tmp", $file_name);
-						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.gzip.tmp", $file_name);
+						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.gz.tmp", $file_name);
 					}
 				};
 			}
@@ -1255,9 +1320,9 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 						const FILE:               &'static str = $file_name;
 						const FILE_EXT:           &'static str = $file_ext;
 						const FILE_NAME:          &'static str = $crate::const_format!("{}.{}", $file_name, $file_ext);
-						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.{}.gzip", $file_name, $file_ext);
+						const FILE_NAME_GZIP:     &'static str = $crate::const_format!("{}.{}.gz", $file_name, $file_ext);
 						const FILE_NAME_TMP:      &'static str = $crate::const_format!("{}.{}.tmp", $file_name, $file_ext);
-						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gzip.tmp", $file_name, $file_ext);
+						const FILE_NAME_GZIP_TMP: &'static str = $crate::const_format!("{}.{}.gz.tmp", $file_name, $file_ext);
 					}
 				};
 			}
