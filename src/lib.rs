@@ -329,11 +329,13 @@ pub use const_format::assertcp as const_assert;
 #[doc(hidden)]
 pub use const_format::formatcp as const_format;
 #[doc(hidden)]
-pub use const_str::*;
+pub use const_str::starts_with;
 #[doc(hidden)]
-pub use seq_macro::*;
+pub use const_str::ends_with;
 #[doc(hidden)]
-pub use paste::*;
+pub use seq_macro::seq;
+#[doc(hidden)]
+pub use paste::paste;
 
 //------ File formats
 #[cfg(feature = "bincode")]
