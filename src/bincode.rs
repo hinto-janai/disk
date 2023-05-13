@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------------------------------- Use
-use anyhow::{anyhow,bail,ensure};
+use anyhow::{anyhow,bail};
 use std::path::PathBuf;
 use crate::common;
 use crate::header::*;
@@ -38,8 +38,8 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 	/// Internal function. Most efficient `from_file()` impl.
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
-		let mut file = std::fs::File::open(&path)?;
-		Ok(Self::from_reader(&mut file)?)
+		let mut file = std::fs::File::open(path)?;
+		Self::from_reader(&mut file)
 	}
 
 	#[inline(always)]
@@ -74,7 +74,7 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 		where
 			W: Write,
 	{
-		writer.write(&Self::full_header());
+		writer.write(&Self::full_header())?;
 		Ok(ENCODING_OPTIONS.serialize_into(&mut BufWriter::new(writer), self)?)
 	}
 

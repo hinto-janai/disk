@@ -1,10 +1,10 @@
 //---------------------------------------------------------------------------------------------------- Use
-use anyhow::{anyhow,bail,ensure};
+use anyhow::{anyhow,bail};
 use std::path::PathBuf;
 use crate::common;
 use std::io::{
 	Read,Write,
-	BufReader,BufWriter,
+	BufReader,
 };
 
 //---------------------------------------------------------------------------------------------------- Ron
@@ -27,7 +27,7 @@ pub unsafe trait Ron: serde::Serialize + serde::de::DeserializeOwned {
 	/// Internal function. Most efficient `from_file()` impl.
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
-		let file = std::fs::File::open(&path)?;
+		let file = std::fs::File::open(path)?;
 		Ok(ron::de::from_reader(&mut BufReader::new(file))?)
 	}
 

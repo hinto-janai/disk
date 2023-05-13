@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------------------------------- Use
-use anyhow::{anyhow,bail,ensure};
+use anyhow::{anyhow,bail};
 use std::path::PathBuf;
 use crate::common;
 //use log::{info,error,warn,trace,debug};
@@ -20,7 +20,7 @@ pub unsafe trait Bson: serde::Serialize + serde::de::DeserializeOwned {
 	/// Internal function. Most efficient `from_file()` impl.
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
-		let mut file = std::fs::File::open(&path)?;
+		let mut file = std::fs::File::open(path)?;
 		Ok(bson::from_reader(&mut file)?)
 	}
 

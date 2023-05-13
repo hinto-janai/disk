@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------- Use
-use anyhow::{anyhow,bail,ensure,Error};
+use anyhow::{anyhow,bail,Error};
 use directories::ProjectDirs;
-use serde::{Serialize,Deserialize};
+
 use std::path::{Path,PathBuf};
 use crate::Dir;
 
@@ -71,7 +71,7 @@ pub(crate) fn compress(bytes: &[u8]) -> Result<Vec<u8>, Error> {
 	use std::io::prelude::*;
 	use flate2::Compression;
 	use flate2::write::GzEncoder;
-	use std::io::BufReader;
+	
 
 	// Compress bytes and write.
 	let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
@@ -115,7 +115,7 @@ macro_rules! file_bufr_gzip {
 		)
 	}
 }
-pub(crate) use file_bufr_gzip;
+
 
 // Create a `File` -> `BufWriter` from a `Path`.
 macro_rules! file_bufw {
@@ -178,8 +178,8 @@ macro_rules! impl_file_bytes {
 		///
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
 		fn file_bytes_memmap(start: usize, end: usize) -> Result<Vec<u8>, anyhow::Error> {
-			use std::io::Read;
-			use std::io::{Seek,SeekFrom};
+			
+			
 
 			if start > end {
 				bail!("file_bytes(): start > end");
@@ -259,7 +259,7 @@ macro_rules! impl_io {
 		#[inline(always)]
 		/// Read the file as bytes, decompress with `gzip` and deserialize into [`Self`].
 		fn from_file_gzip() -> Result<Self, anyhow::Error> {
-			Ok(Self::from_bytes(&Self::read_to_bytes_gzip()?)?)
+			Self::from_bytes(&Self::read_to_bytes_gzip()?)
 		}
 
 		#[inline(always)]
@@ -272,7 +272,7 @@ macro_rules! impl_io {
 		unsafe fn from_file_memmap() -> Result<Self, anyhow::Error> {
 			let file = std::fs::File::open(Self::absolute_path()?)?;
 			let mmap = unsafe { memmap2::Mmap::map(&file)? };
-			Ok(Self::from_bytes(&*mmap)?)
+			Self::from_bytes(&*mmap)
 		}
 
 		#[inline(always)]
@@ -285,7 +285,7 @@ macro_rules! impl_io {
 		unsafe fn from_file_gzip_memmap() -> Result<Self, anyhow::Error> {
 			let file = std::fs::File::open(Self::absolute_path_gzip()?)?;
 			let mmap = unsafe { memmap2::Mmap::map(&file)? };
-			Ok(Self::from_bytes(&common::decompress(&*mmap)?)?)
+			Self::from_bytes(&common::decompress(&*mmap)?)
 		}
 
 		/// Try saving as a file.
@@ -889,7 +889,7 @@ macro_rules! impl_common {
 		/// This is the `PATH` leading up to [`Self::PROJECT_DIRECTORY`].
 		fn project_dir_path() -> Result<PathBuf, anyhow::Error> {
 			// Get a `ProjectDir` from our project name.
-			Ok(common::get_projectdir(&Self::OS_DIRECTORY, &Self::PROJECT_DIRECTORY)?)
+			common::get_projectdir(&Self::OS_DIRECTORY, &Self::PROJECT_DIRECTORY)
 		}
 
 		/// Returns the top-level parent sub-directory associated with this struct.

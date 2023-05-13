@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------------------------------- Use
-use anyhow::{anyhow,bail,ensure};
+use anyhow::{anyhow,bail};
 use std::path::PathBuf;
 use crate::common;
 //use log::{info,error,warn,trace,debug};
@@ -19,13 +19,13 @@ pub unsafe trait Postcard: serde::Serialize + serde::de::DeserializeOwned {
 	#[inline(always)]
 	/// Internal function. Most efficient `from_file()` impl.
 	fn __from_file() -> Result <Self, anyhow::Error> {
-		Ok(Self::from_bytes(&Self::read_to_bytes()?)?)
+		Self::from_bytes(&Self::read_to_bytes()?)
 	}
 
 	#[inline(always)]
 	/// Create [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {
-		common::convert_error(postcard::from_bytes(&bytes))
+		common::convert_error(postcard::from_bytes(bytes))
 	}
 
 	#[inline(always)]

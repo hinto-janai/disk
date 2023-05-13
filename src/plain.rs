@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------------------------------- Use
-use anyhow::{anyhow,bail,ensure};
+use anyhow::{anyhow,bail};
 use std::path::PathBuf;
 use crate::common;
 //use log::{info,error,warn,trace,debug};
@@ -20,7 +20,7 @@ pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 	#[inline(always)]
 	/// Internal function. Most efficient `from_file()` impl.
 	fn __from_file() -> Result <Self, anyhow::Error> {
-		Ok(Self::from_bytes(&Self::read_to_bytes()?)?)
+		Self::from_bytes(&Self::read_to_bytes()?)
 	}
 
 	// Required functions for generic-ness.

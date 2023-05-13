@@ -1,10 +1,10 @@
 //---------------------------------------------------------------------------------------------------- Use
-use anyhow::{anyhow,bail,ensure};
+use anyhow::{anyhow,bail};
 use std::path::PathBuf;
 use crate::common;
 use bincode2::config::*;
 use crate::header::*;
-use std::io::{Seek,SeekFrom};
+use std::io::{Seek};
 //use log::{info,error,warn,trace,debug};
 //use serde::{Serialize,Deserialize};
 use std::io::{
@@ -56,8 +56,8 @@ pub unsafe trait Bincode2: bincode2::Encode + bincode2::Decode {
 	/// Internal function. Most efficient `from_file()` impl.
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
-		let mut file = std::fs::File::open(&path)?;
-		Ok(Self::from_reader(&mut file)?)
+		let mut file = std::fs::File::open(path)?;
+		Self::from_reader(&mut file)
 	}
 
 	#[inline(always)]
@@ -119,7 +119,7 @@ pub unsafe trait Bincode2: bincode2::Encode + bincode2::Decode {
 		where
 			W: Write,
 	{
-		writer.write(&Self::full_header());
+		writer.write(&Self::full_header())?;
 		Ok(bincode2::encode_into_std_write(self, &mut BufWriter::new(writer), *ENCODING_OPTIONS)?)
 	}
 

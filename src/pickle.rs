@@ -1,12 +1,12 @@
 //---------------------------------------------------------------------------------------------------- Use
-use anyhow::{anyhow,bail,ensure};
+use anyhow::{anyhow,bail};
 use std::path::PathBuf;
 use crate::common;
 //use log::{info,error,warn,trace,debug};
 //use serde::{Serialize,Deserialize};
 use std::io::{
 	Read,Write,
-	BufReader,BufWriter,
+	BufReader,
 };
 
 //---------------------------------------------------------------------------------------------------- Rmp
@@ -31,7 +31,7 @@ pub unsafe trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
 	/// Internal function. Most efficient `from_file()` impl.
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
-		let file = std::fs::File::open(&path)?;
+		let file = std::fs::File::open(path)?;
 		Ok(serde_pickle::de::from_reader(&mut BufReader::new(file), serde_pickle::de::DeOptions::new())?)
 	}
 

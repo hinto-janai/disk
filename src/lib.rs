@@ -329,9 +329,12 @@ pub use const_format::assertcp as const_assert;
 #[doc(hidden)]
 pub use const_format::formatcp as const_format;
 #[doc(hidden)]
-pub use const_str::starts_with;
-#[doc(hidden)]
-pub use const_str::ends_with;
+pub use const_str::{
+	starts_with,
+	ends_with,
+	contains,
+	split,
+};
 #[doc(hidden)]
 pub use seq_macro::seq;
 #[doc(hidden)]
