@@ -35,13 +35,13 @@ crate::common::impl_macro_no_ext!(Empty);
 /// Hello::touch().unwrap();
 ///
 /// // Make sure it (and the directories) exist.
-/// assert!(Hello::exists().unwrap());
+/// assert!(Hello::exists().is_ok());
 ///
 /// // Delete the project directory.
-/// Hello::rm_rf().unwrap();
+/// Hello::rm_project().unwrap();
 ///
 /// // Make sure the file no longer exist.
-/// assert!(!Hello::exists().unwrap());
+/// assert!(!Hello::exists().is_ok());
 /// ```
 /// This creates a file called `hello`, containing no data. The `bool` is ignored.
 ///
