@@ -153,11 +153,7 @@ macro_rules! impl_file_bytes {
 					true  => 1,
 					false => end - start,
 				};
-				let mut vec = Vec::with_capacity(len);
-				// SAFETY:
-				// New length is == to capacity.
-				unsafe { vec.set_len(len); }
-				vec
+				vec![0; len]
 			};
 
 			let file = std::fs::File::open(Self::absolute_path()?)?;
@@ -178,9 +174,6 @@ macro_rules! impl_file_bytes {
 		///
 		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
 		fn file_bytes_memmap(start: usize, end: usize) -> Result<Vec<u8>, anyhow::Error> {
-			
-			
-
 			if start > end {
 				bail!("file_bytes(): start > end");
 			}

@@ -7,11 +7,10 @@ use std::io::{
 	Read,Write,
 	BufReader,
 };
+use once_cell::sync::Lazy;
 
 //---------------------------------------------------------------------------------------------------- Json
-lazy_static::lazy_static! {
-	pub static ref ENCODING_OPTIONS: PrettyFormatter<'static> = PrettyFormatter::with_indent(b"    ");
-}
+static ENCODING_OPTIONS: Lazy<PrettyFormatter<'static>> = Lazy::new(|| PrettyFormatter::with_indent(b"    "));
 
 crate::common::impl_macro!(Json, "json");
 //crate::common::impl_macro_outer!(Json, "json");
@@ -36,7 +35,7 @@ pub unsafe trait Json: serde::Serialize + serde::de::DeserializeOwned {
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
 		let file = std::fs::File::open(path)?;
-		Ok(serde_json::from_reader(&mut BufReader::new(file))?)
+		Ok(serde_json::from_reader(BufReader::new(file))?)
 	}
 
 	// Required functions for generic-ness.

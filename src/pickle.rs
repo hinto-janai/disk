@@ -32,7 +32,7 @@ pub unsafe trait Pickle: serde::Serialize + serde::de::DeserializeOwned {
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
 		let file = std::fs::File::open(path)?;
-		Ok(serde_pickle::de::from_reader(&mut BufReader::new(file), serde_pickle::de::DeOptions::new())?)
+		Ok(serde_pickle::de::from_reader(BufReader::new(file), serde_pickle::de::DeOptions::new())?)
 	}
 
 	#[inline(always)]

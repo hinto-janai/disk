@@ -26,7 +26,7 @@ pub unsafe trait MessagePack: serde::Serialize + serde::de::DeserializeOwned {
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
 		let file = std::fs::File::open(path)?;
-		Ok(rmp_serde::decode::from_read(&mut BufReader::new(file))?)
+		Ok(rmp_serde::decode::from_read(BufReader::new(file))?)
 	}
 
 	#[inline(always)]

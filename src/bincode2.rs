@@ -11,11 +11,10 @@ use std::io::{
 	Read,Write,
 	BufReader,BufWriter,
 };
+use once_cell::sync::Lazy;
 
 //---------------------------------------------------------------------------------------------------- Bincode
-lazy_static::lazy_static! {
-	pub static ref ENCODING_OPTIONS: Configuration = bincode2::config::standard();
-}
+static ENCODING_OPTIONS: Lazy<Configuration> = Lazy::new(bincode2::config::standard);
 
 crate::common::impl_macro_binary!(Bincode2, "bin");
 
@@ -89,9 +88,10 @@ pub unsafe trait Bincode2: bincode2::Encode + bincode2::Decode {
 			R: Read,
 	{
 		let mut bytes = [0_u8; 25];
+		let mut reader = BufReader::new(reader);
 		reader.read_exact(&mut bytes)?;
 		ensure_header!(bytes);
-		Ok(bincode2::decode_from_std_read(&mut BufReader::new(reader), *ENCODING_OPTIONS)?)
+		Ok(bincode2::decode_from_std_read(&mut reader, *ENCODING_OPTIONS)?)
 	}
 
 	#[inline(always)]
@@ -119,8 +119,9 @@ pub unsafe trait Bincode2: bincode2::Encode + bincode2::Decode {
 		where
 			W: Write,
 	{
-		writer.write(&Self::full_header())?;
-		Ok(bincode2::encode_into_std_write(self, &mut BufWriter::new(writer), *ENCODING_OPTIONS)?)
+		let mut writer = BufWriter::new(writer);
+		writer.write_all(&Self::full_header())?;
+		Ok(bincode2::encode_into_std_write(self, &mut writer, *ENCODING_OPTIONS)?)
 	}
 
 	impl_header!();

@@ -23,7 +23,7 @@ pub unsafe trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 	fn __from_file() -> Result <Self, anyhow::Error> {
 		let path = Self::absolute_path()?;
 		let file = std::fs::File::open(path)?;
-		Ok(serde_yaml::from_reader(&mut BufReader::new(file))?)
+		Ok(serde_yaml::from_reader(BufReader::new(file))?)
 	}
 
 	// Required functions for generic-ness.

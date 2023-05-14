@@ -10,12 +10,11 @@ use std::io::{
 	Read,Write,
 	BufReader,BufWriter,
 };
+use once_cell::sync::Lazy;
 
 //---------------------------------------------------------------------------------------------------- Bincode
-lazy_static::lazy_static! {
-	pub static ref ENCODING_OPTIONS: WithOtherIntEncoding<DefaultOptions, VarintEncoding> =
-		bincode::DefaultOptions::new().with_varint_encoding();
-}
+static ENCODING_OPTIONS: Lazy<WithOtherIntEncoding<DefaultOptions, VarintEncoding>> =
+		Lazy::new(|| bincode::DefaultOptions::new().with_varint_encoding());
 
 common::impl_macro_binary!(Bincode, "bin");
 
@@ -63,9 +62,10 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 			R: Read,
 	{
 		let mut bytes = [0_u8; 25];
+		let mut reader = BufReader::new(reader);
 		reader.read_exact(&mut bytes)?;
 		ensure_header!(bytes);
-		Ok(ENCODING_OPTIONS.deserialize_from(&mut BufReader::new(reader))?)
+		Ok(ENCODING_OPTIONS.deserialize_from(&mut reader)?)
 	}
 
 	#[inline(always)]
@@ -74,8 +74,9 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 		where
 			W: Write,
 	{
-		writer.write(&Self::full_header())?;
-		Ok(ENCODING_OPTIONS.serialize_into(&mut BufWriter::new(writer), self)?)
+		let mut writer = BufWriter::new(writer);
+		writer.write_all(&Self::full_header())?;
+		Ok(ENCODING_OPTIONS.serialize_into(&mut writer, self)?)
 	}
 
 	impl_header!();
