@@ -71,7 +71,6 @@ pub(crate) fn compress(bytes: &[u8]) -> Result<Vec<u8>, Error> {
 	use std::io::prelude::*;
 	use flate2::Compression;
 	use flate2::write::GzEncoder;
-	
 
 	// Compress bytes and write.
 	let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
@@ -96,7 +95,6 @@ macro_rules! file_bufr {
 		std::io::BufReader::new(
 			std::fs::OpenOptions::new()
 			.read(true)
-			.write(true)
 			.create(true)
 			.open(Self::absolute_path()?)?
 		)
@@ -123,6 +121,7 @@ macro_rules! file_bufw {
 		std::io::BufWriter::new(
 			std::fs::OpenOptions::new()
 			.write(true)
+			.truncate(true)
 			.create(true)
 			.open(&$path)?
 		)
