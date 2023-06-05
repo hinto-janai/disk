@@ -6,11 +6,11 @@ use crate::common;
 //use serde::{Serialize,Deserialize};
 
 //---------------------------------------------------------------------------------------------------- Toml
-crate::common::impl_macro!(Plain, "txt");
+crate::common::impl_macro_no_ext!(Plain);
 
 /// [`Plain`](https://docs.rs/serde_plain) text file format
 ///
-/// This is a plain text file with the file extension `.txt`.
+/// This is a plain text file with no file extension.
 /// Typically used for small and simple data types like integers, strings, and enums.
 ///
 /// ## Safety
@@ -52,7 +52,7 @@ pub unsafe trait Plain: serde::Serialize + serde::de::DeserializeOwned {
 	}
 
 	// Common data/functions.
-	common::impl_string!("txt");
+	common::impl_string!("");
 }
 
 //---------------------------------------------------------------------------------------------------- TESTS

@@ -95,7 +95,6 @@ macro_rules! file_bufr {
 		std::io::BufReader::new(
 			std::fs::OpenOptions::new()
 			.read(true)
-			.create(true)
 			.open(Self::absolute_path()?)?
 		)
 	}
@@ -108,12 +107,10 @@ macro_rules! file_bufr_gzip {
 		std::io::BufReader::new(
 			std::fs::OpenOptions::new()
 			.read(true)
-			.create(true)
 			.open(Self::absolute_path_gzip()?)?
 		)
 	}
 }
-
 
 // Create a `File` -> `BufWriter` from a `Path`.
 macro_rules! file_bufw {
@@ -121,8 +118,8 @@ macro_rules! file_bufw {
 		std::io::BufWriter::new(
 			std::fs::OpenOptions::new()
 			.write(true)
-			.truncate(true)
 			.create(true)
+			.truncate(true)
 			.open(&$path)?
 		)
 	}
