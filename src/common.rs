@@ -1174,7 +1174,7 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 "]
 			#[macro_export]
 			macro_rules! [<$trait:lower>] {
-				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt, $header:tt, $version:tt) => {
+				($data:ty, $dir:expr, $project_directory:expr, $sub_directories:expr, $file_name:expr, $header:expr, $version:expr) => {
 					$crate::assert_str!($project_directory, $sub_directories, $file_name);
 
 					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
@@ -1237,7 +1237,7 @@ This example would be located at `~/.local/share/myproject/some/dirs/state`.
 "]
 			#[macro_export]
 			macro_rules! [<$trait:lower>] {
-				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
+				($data:ty, $dir:expr, $project_directory:expr, $sub_directories:expr, $file_name:expr) => {
 					$crate::assert_str!($project_directory, $sub_directories, $file_name);
 
 					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
@@ -1298,7 +1298,7 @@ This example would be located at `~/.local/share/myproject/some/dirs/state." $fi
 "]
 			#[macro_export]
 			macro_rules! [<$trait:lower>] {
-				($data:ty, $dir:expr, $project_directory:tt, $sub_directories:tt, $file_name:tt) => {
+				($data:ty, $dir:expr, $project_directory:expr, $sub_directories:expr, $file_name:expr) => {
 					$crate::assert_str!($project_directory, $sub_directories, $file_name);
 
 					// SAFETY: The input to this `" $trait "` implementation was verified and sanity-checked via macro.
