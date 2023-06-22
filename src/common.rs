@@ -789,6 +789,36 @@ macro_rules! impl_common {
 		}
 
 		#[inline]
+		/// Recursively remove this file's basepath.
+		///
+		/// This deletes _all_ directories starting from the last [`Self::SUB_DIRECTORIES`].
+		///
+		/// AKA, the directory returned from [`Self::base_path`].
+		///
+		/// For example:
+		/// ```rust,ignore
+		/// disk::toml!(State, disk::Dir::Data, "MyProject", "some/sub/dirs", "state");
+		/// ```
+		/// Everything starting from  `~/.local/share/myproject/some/sub/dirs` gets removed recursively.
+		///
+		/// This is akin to running:
+		/// ```ignore
+		/// rm -rf ~/.local/share/myproject/some/sub/dirs
+		/// ```
+		///
+		/// This function calls [`std::fs::remove_dir_all`], which does _not_ follow symlinks.
+		///
+		/// On success, this returns:
+		/// - The amount of bytes removed
+		/// - The [`PathBuf`] that was removed
+		fn rm_base() -> Result<crate::Metadata, anyhow::Error> {
+			let path = Self::base_path()?;
+			let size = crate::common::filesize(&path);
+			std::fs::remove_dir_all(&path)?;
+			Ok(crate::Metadata::new(size, path))
+		}
+
+		#[inline]
 		/// Recursively remove this file's sub-directories.
 		///
 		/// This deletes _all_ directories starting from the parent [`Self::SUB_DIRECTORIES`].
