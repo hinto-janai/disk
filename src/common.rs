@@ -194,6 +194,7 @@ macro_rules! impl_file_bytes {
 
 			let file = std::fs::File::open(Self::absolute_path()?)?;
 			let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
+			#[cfg(unix)]
 			mmap.advise(memmap2::Advice::Sequential);
 			let len = mmap.len();
 
@@ -282,6 +283,7 @@ macro_rules! impl_io {
 		unsafe fn from_file_memmap() -> Result<Self, anyhow::Error> {
 			let file = std::fs::File::open(Self::absolute_path()?)?;
 			let mmap = unsafe { memmap2::Mmap::map(&file)? };
+			#[cfg(unix)]
 			mmap.advise(memmap2::Advice::Sequential);
 			Self::from_bytes(&*mmap)
 		}
@@ -296,6 +298,7 @@ macro_rules! impl_io {
 		unsafe fn from_file_gzip_memmap() -> Result<Self, anyhow::Error> {
 			let file = std::fs::File::open(Self::absolute_path_gzip()?)?;
 			let mmap = unsafe { memmap2::Mmap::map(&file)? };
+			#[cfg(unix)]
 			mmap.advise(memmap2::Advice::Sequential);
 			Self::from_bytes(&common::decompress(&*mmap)?)
 		}
@@ -318,6 +321,7 @@ macro_rules! impl_io {
 		unsafe fn from_path_memmap<P: std::convert::AsRef<std::path::Path>>(path: P) -> Result<Self, anyhow::Error> {
 			let file = std::fs::File::open(path.as_ref())?;
 			let mmap = unsafe { memmap2::Mmap::map(&file)? };
+			#[cfg(unix)]
 			mmap.advise(memmap2::Advice::Sequential);
 			Self::from_bytes(&*mmap)
 		}
@@ -373,6 +377,7 @@ macro_rules! impl_io {
 
 			// Write and flush.
 			let mut mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
+			#[cfg(unix)]
 			mmap.advise(memmap2::Advice::Sequential);
 			mmap.copy_from_slice(&bytes);
 			mmap.flush_async()?;
