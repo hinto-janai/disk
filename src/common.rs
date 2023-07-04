@@ -126,6 +126,24 @@ macro_rules! file_bufw {
 }
 pub(crate) use file_bufw;
 
+#[inline(always)]
+// Read a PATH as bytes.
+pub(crate) fn path_to_bytes(path: &std::path::Path) -> Result<Vec<u8>, anyhow::Error> {
+	use std::io::Read;
+
+	let mut bufr = std::io::BufReader::new(
+		std::fs::OpenOptions::new()
+		.read(true)
+		.open(path)?
+	);
+	let mut vec  = match bufr.get_ref().metadata() {
+		Ok(m) => Vec::with_capacity(m.len().try_into().unwrap_or(100)),
+		_     => Vec::new(),
+	};
+	bufr.read_to_end(&mut vec)?;
+	Ok(vec)
+}
+
 //---------------------------------------------------------------------------------------------------- impl_file_bytes
 // Implements `file_bytes()` for 32/64bit.
 macro_rules! impl_file_bytes {
@@ -176,6 +194,7 @@ macro_rules! impl_file_bytes {
 
 			let file = std::fs::File::open(Self::absolute_path()?)?;
 			let mmap = unsafe { memmap2::MmapOptions::new().map(&file)? };
+			mmap.advise(memmap2::Advice::Sequential);
 			let len = mmap.len();
 
 			if mmap.len() < end {
@@ -205,7 +224,7 @@ macro_rules! impl_io {
 
 			let mut bufr = crate::common::file_bufr!();
 			let mut vec  = match bufr.get_ref().metadata() {
-				Ok(m) => Vec::with_capacity(m.len().try_into().unwrap_or(0)),
+				Ok(m) => Vec::with_capacity(m.len().try_into().unwrap_or(100)),
 				_     => Vec::new(),
 			};
 			bufr.read_to_end(&mut vec)?;
@@ -241,6 +260,8 @@ macro_rules! impl_io {
 
 		#[inline(always)]
 		/// Read the file as bytes and deserialize into [`Self`].
+		///
+		/// Internally, this functions calls the most optimal function for the format.
 		fn from_file() -> Result<Self, anyhow::Error> {
 			Self::__from_file()
 		}
@@ -261,6 +282,7 @@ macro_rules! impl_io {
 		unsafe fn from_file_memmap() -> Result<Self, anyhow::Error> {
 			let file = std::fs::File::open(Self::absolute_path()?)?;
 			let mmap = unsafe { memmap2::Mmap::map(&file)? };
+			mmap.advise(memmap2::Advice::Sequential);
 			Self::from_bytes(&*mmap)
 		}
 
@@ -274,7 +296,30 @@ macro_rules! impl_io {
 		unsafe fn from_file_gzip_memmap() -> Result<Self, anyhow::Error> {
 			let file = std::fs::File::open(Self::absolute_path_gzip()?)?;
 			let mmap = unsafe { memmap2::Mmap::map(&file)? };
+			mmap.advise(memmap2::Advice::Sequential);
 			Self::from_bytes(&common::decompress(&*mmap)?)
+		}
+
+		#[inline(always)]
+		/// Reads _an arbitrary_ PATH, and attempts to deserialize into [`Self`].
+		///
+		/// Internally, this functions calls the most optimal function for the format.
+		fn from_path<P: std::convert::AsRef<std::path::Path>>(path: P) -> Result<Self, anyhow::Error> {
+			Self::__from_path(path.as_ref())
+		}
+
+		#[inline(always)]
+		/// Same as [`Self::from_path`] but with [`memmap2`](https://docs.rs/memmap2).
+		///
+		/// ## Safety
+		/// You _must_ understand all the invariants that `memmap` comes with.
+		///
+		/// More details [here](https://docs.rs/memmap2/latest/memmap2/struct.Mmap.html).
+		unsafe fn from_path_memmap<P: std::convert::AsRef<std::path::Path>>(path: P) -> Result<Self, anyhow::Error> {
+			let file = std::fs::File::open(path.as_ref())?;
+			let mmap = unsafe { memmap2::Mmap::map(&file)? };
+			mmap.advise(memmap2::Advice::Sequential);
+			Self::from_bytes(&*mmap)
 		}
 
 		/// Try saving as a file.
@@ -328,6 +373,7 @@ macro_rules! impl_io {
 
 			// Write and flush.
 			let mut mmap = unsafe { memmap2::MmapMut::map_mut(&file)? };
+			mmap.advise(memmap2::Advice::Sequential);
 			mmap.copy_from_slice(&bytes);
 			mmap.flush_async()?;
 

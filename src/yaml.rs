@@ -26,6 +26,14 @@ pub unsafe trait Yaml: serde::Serialize + serde::de::DeserializeOwned {
 		Ok(serde_yaml::from_reader(BufReader::new(file))?)
 	}
 
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_path()` impl.
+	fn __from_path(path: &std::path::Path) -> Result <Self, anyhow::Error> {
+		let file = std::fs::File::open(path)?;
+		Ok(serde_yaml::from_reader(BufReader::new(file))?)
+	}
+
 	// Required functions for generic-ness.
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.

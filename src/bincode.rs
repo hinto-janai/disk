@@ -41,6 +41,14 @@ pub unsafe trait Bincode: serde::Serialize + serde::de::DeserializeOwned {
 		Self::from_reader(&mut file)
 	}
 
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_path()` impl.
+	fn __from_path(path: &std::path::Path) -> Result <Self, anyhow::Error> {
+		let mut file = std::fs::File::open(path)?;
+		Self::from_reader(&mut file)
+	}
+
 	#[inline(always)]
 	/// Create a [`Self`] from bytes.
 	fn from_bytes(bytes: &[u8]) -> Result<Self, anyhow::Error> {

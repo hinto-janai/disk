@@ -22,6 +22,13 @@ pub unsafe trait Toml: serde::Serialize + serde::de::DeserializeOwned {
 		Self::from_bytes(&Self::read_to_bytes()?)
 	}
 
+	#[doc(hidden)]
+	#[inline(always)]
+	/// Internal function. Most efficient `from_path()` impl.
+	fn __from_path(path: &std::path::Path) -> Result<Self, anyhow::Error> {
+		Self::from_bytes(&crate::common::path_to_bytes(path)?)
+	}
+
 	// Required functions for generic-ness.
 	#[inline(always)]
 	/// Convert [`Self`] to bytes.
