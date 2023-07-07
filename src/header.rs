@@ -110,6 +110,95 @@ macro_rules! impl_header {
 				bail!("header bytes failed to match.\nexpected: {:?}\nfound: {:?}", Self::HEADER, &bytes[0..24]);
 			}
 		}
+
+		#[inline]
+		/// This is the function that ties the versioning system together.
+		///
+		/// It takes a variable static array of `(VERSION, Struct::constructor)`
+		/// tuples, attempting to deserialize them starting from index `0`.
+		///
+		/// AKA, you give a list of versions and your choice of `disk`
+		/// constructors for various versions of the same-ish struct.
+		///
+		/// An example:
+		/// ```rust,ignore
+		/// disk::bincode!(Data0, Dir::Data, "Data", "", "data", [255_u8; 24], 0); // <- note: version 0.
+		/// struct Data0 {
+		///     data: Vec<u8>,
+		/// }
+		///
+		/// // This converts a `Data0` into a `Data5`
+		/// impl Data0 {
+		///     fn to_data5() -> Result<Data5, anyhow::Error> {
+		///         match Self::from_file() {
+		///             Ok(s)  => Ok(Data1 { data: s.data, ..Default::default() }),
+		///             Err(e) => Err(e),
+		///         }
+		///     }
+		/// }
+		///
+		/// /* ... data1, data2, data3, data4 ... */
+		///
+		/// disk::bincode!(Data1, Dir::Data, "Data", "", "data", [255_u8; 24], 5); // <- note: version 5.
+		/// struct Data5 {
+		///     data: Vec<u8>,
+		///     more_data: Vec<u8>,
+		/// }
+		/// ```
+		///
+		/// The `Data0::to_data5()` can be used as the constructor for this function.
+		///
+		/// Now, if we'd like to deserialize `Data5`, but fallback if
+		/// the file detected is an older version, we can write this:
+		/// ```rust,ignore
+		/// let data = Data5::from_versions(&[
+		///     (5, Data5::from_file), // Your choice of function here.
+		///     (4, Data4::to_data5),  // These as well.
+		///     (3, Data3::to_data5),
+		///     (2, Data2::to_data5),
+		///     (1, Data1::to_data5),
+		///     (0, Data0::to_data5),
+		/// ]).unwrap();
+		///```
+		/// This will go top-to-bottom starting at `5`, ending at `0`,
+		/// checking if the version matches, then attempting deserialization.
+		///
+		/// The returned `Ok(u8, Self)` contains the version that successfully
+		/// matched and the resulting (converted) deserialized data.
+		///
+		/// The output data is always `Self`, so the `fn()` constructors you
+		/// input are responsible for converting between the various types.
+		fn from_versions(
+			versions_and_constructors: &'static [(u8, fn() -> Result<Self, anyhow::Error>)],
+		) -> Result<(u8, Self), anyhow::Error> {
+			// Get on-disk version.
+			let file = Self::file_version()?;
+
+//			// If target version, attempt deserialization and return.
+//			if file == Self::VERSION {
+//				return match constructor() {
+//					Ok(data) => Ok((file, data)),
+//					Err(e)   => Err(e),
+//				};
+//			}
+
+			// Else, attempt the other version constructors.
+			for (version, constructor) in versions_and_constructors {
+				// If not the matching version, continue.
+				if file != *version {
+					continue;
+				}
+
+				// If version matches, attempt to construct.
+				return match constructor() {
+					Ok(data) => Ok((*version, data)),
+					Err(e)   => Err(e),
+				};
+			}
+
+			// Return error if nothing worked.
+			Err(anyhow!("all versions failed to match: {versions_and_constructors:#?}"))
+		}
 	}
 }
 pub(crate) use impl_header;
